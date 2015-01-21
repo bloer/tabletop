@@ -1,13 +1,14 @@
 #!/bin/env node
-//  OpenShift sample Node application
+//  virtual network tabletop application
 var express = require('express');
-var fs      = require('fs');
-
+var app = express();
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
 
 /**
  *  Define the sample application.
  */
-var SampleApp = function() {
+var tabletop_server = function() {
 
     //  Scope.
     var self = this;
@@ -34,26 +35,7 @@ var SampleApp = function() {
     };
 
 
-    /**
-     *  Populate the cache.
-     */
-    self.populateCache = function() {
-        if (typeof self.zcache === "undefined") {
-            self.zcache = { 'index.html': '' };
-        }
-
-        //  Local cache for static content.
-        self.zcache['index.html'] = fs.readFileSync('./index.html');
-    };
-
-
-    /**
-     *  Retrieve entry (content) from cache.
-     *  @param {string} key  Key identifying content to retrieve from cache.
-     */
-    self.cache_get = function(key) { return self.zcache[key]; };
-
-
+    
     /**
      *  terminator === the termination handler
      *  Terminate server on receipt of the specified signal.
@@ -84,54 +66,42 @@ var SampleApp = function() {
         });
     };
 
+    self.setupEventHandlers = function(){
+      io.on('connection', function (socket) {
+        console.log("New connection opened from"+socket.conn.remoteAddress);
+        
+        socket.on('hello world',function(){
+          setTimeout(function(){
+            socket.emit('hello yourself',{
+              text:"12345"
+            });
+          },2000);
+        });
+        
+        socket.on('move marker',function(data){
+          console.log("received move marker to "+data.position.top+","+data.position.left);
+          socket.broadcast.emit('move marker',data);
+        });
+        
+        socket.on('disconnect',function() {
+          console.log("Client disconnected");
+        });
+      });
+    };
 
     /*  ================================================================  */
     /*  App server functions (main app logic here).                       */
     /*  ================================================================  */
-
-    /**
-     *  Create the routing table entries + handlers for the application.
-     */
-    self.createRoutes = function() {
-        self.routes = { };
-
-        self.routes['/asciimo'] = function(req, res) {
-            var link = "http://i.imgur.com/kmbjB.png";
-            res.send("<html><body><img src='" + link + "'></body></html>");
-        };
-
-        self.routes['/'] = function(req, res) {
-            res.setHeader('Content-Type', 'text/html');
-            res.send(self.cache_get('index.html') );
-        };
-    };
-
-
-    /**
-     *  Initialize the server (express) and create the routes and register
-     *  the handlers.
-     */
-    self.initializeServer = function() {
-        self.createRoutes();
-        self.app = express.createServer();
-
-        //  Add handlers for the app (from the routes).
-        for (var r in self.routes) {
-            self.app.get(r, self.routes[r]);
-        }
-    };
-
-
+    
     /**
      *  Initializes the sample application.
      */
     self.initialize = function() {
         self.setupVariables();
-        self.populateCache();
         self.setupTerminationHandlers();
-
+        self.setupEventHandlers();
         // Create the express server and routes.
-        self.initializeServer();
+        app.use(express.static(__dirname + '/static'));
     };
 
 
@@ -140,7 +110,7 @@ var SampleApp = function() {
      */
     self.start = function() {
         //  Start the app on the specific interface (and port).
-        self.app.listen(self.port, self.ipaddress, function() {
+        server.listen(self.port, self.ipaddress, function() {
             console.log('%s: Node server started on %s:%d ...',
                         Date(Date.now() ), self.ipaddress, self.port);
         });
@@ -153,7 +123,7 @@ var SampleApp = function() {
 /**
  *  main():  Main code.
  */
-var zapp = new SampleApp();
+var zapp = new tabletop_server();
 zapp.initialize();
 zapp.start();
 
