@@ -1,8 +1,9 @@
 var socket = io();
   
 function getpoint(event){
+  console.log(event);
   parentpos = $(event.target).offset();
-  return [(event.clientX-parentpos.left),(event.clientY-parentpos.top)];
+  return [(event.pageX-parentpos.left),(event.pageY-parentpos.top)];
 }
 
 function getActiveCanvasLayer(){
