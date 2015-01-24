@@ -1,0 +1,97 @@
+<!--
+   index.html
+   
+   Copyright 2015 Ben Loer 
+   
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA.
+   
+   
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+	<title>Virtual Tabletop 0.1.0</title>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="generator" content="Geany 0.21" />
+  <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+  <script src="http://code.jquery.com/ui/1.11.2/jquery-ui.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="jquery.ui.touch-punch.min.js"></script>
+  <script src="tabletopclient.js"></script>
+  
+  <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.11.2/themes/mint-choc/jquery-ui.css">
+  
+  <style>
+    #main {width:1000px; height:700px}
+    #whiteboard-container {width:850px; height:100%; float:left; border:1px solid blue}
+    #sideboard {width:145px; height:100%; float:right}
+    #sideboard input,label {width:120px}
+    #whiteboard_bg { z-index:-1 }
+    #whiteboard {z-index:1}
+    
+    .marker {width:50px; position:absolute; z-index:3;
+              
+              }
+    .marker img {width:inherit; transform:rotate3d(1,1,0,45deg); -webkit-transform:rotate3d(1,1,0,45deg);border:1px solid black;}
+    .marker .markerbase { height:20px; width:inherit; background-color:white; border:1px solid black;
+          transform:rotate3d(1,0,0.4,45deg); -webkit-transform:rotate3d(-1,0,0.3,45deg); 
+          position:relative; top:-20px;left:2px; text-align:center}
+    canvas {position:absolute}
+    #trashcan{ width:100px; height:100px;  
+      background-image:url("Trash_Can-128.png"); background-size:cover}
+    #messages {width:850px; height:150px; overflow:scroll}
+   
+  </style>
+</head>
+
+<body>
+	<h1>Virtual Tabletop 0.1.0</h1>
+  <div id="main">
+    <div id="whiteboard-container">
+      <canvas id="whiteboard_bg" width="850" height="700"></canvas>
+      <canvas id="whiteboard" width="850" height="700"></canvas>
+    </div>
+    <div id="sideboard">
+      <div id="drawcontrols">
+        <label for="drawto">Draw to:</label>
+        <select id="drawto" name="drawto">
+          <option value="0">background</option>
+          <option value="1" selected="true">foreground</option>
+        </select>
+        <button onclick="javascript:clearcan(getActiveCanvasLayer(),1);">Clear</button>
+      </div>
+      <hr>
+      <div id="markercontrols">
+        <form id="addmarker" action="javascript:addmarker();">
+          <label for="addmarkerurl">URL</label><br>
+          <input type="text" id="addmarkerurl">
+          <label for="addmarkerlabel">Label (optional)</label><br>
+          <input type="text" id="addmarkerlabel" >
+          <button >Add new marker</button>
+        </form>
+        <div id="trashcan"></div>
+      </div>
+           
+    </div>
+  <div id="messages"></div>
+  </div>
+  
+</body>
+
+</html>
