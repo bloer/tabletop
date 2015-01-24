@@ -33,23 +33,29 @@
   <script src="http://code.jquery.com/ui/1.11.2/jquery-ui.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="jquery.ui.touch-punch.min.js"></script>
-  <script src="/main.js"></script>
+  <script src="tabletopclient.js"></script>
   
   <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.11.2/themes/mint-choc/jquery-ui.css">
   
   <style>
     #main {width:1000px; height:700px}
-    #whiteboard-container {width:850px; height:100%; float:left}
+    #whiteboard-container {width:850px; height:100%; float:left; border:1px solid blue}
     #sideboard {width:145px; height:100%; float:right}
     #sideboard input,label {width:120px}
     #whiteboard_bg { z-index:-1 }
     #whiteboard {z-index:1}
     
-    .marker {width:50px; position:absolute; transform:rotate3d(1.2,1.5,0,45deg); z-index:3}
-    .marker img {width:100%; }
+    .marker {width:50px; position:absolute; z-index:3;
+              
+              }
+    .marker img {width:inherit; transform:rotate3d(1,1,0,45deg); -webkit-transform:rotate3d(1,1,0,45deg);border:1px solid black;}
+    .marker .markerbase { height:20px; width:inherit; background-color:white; border:1px solid black;
+          transform:rotate3d(1,0,0.4,45deg); -webkit-transform:rotate3d(-1,0,0.3,45deg); 
+          position:relative; top:-20px;left:2px; text-align:center}
     canvas {position:absolute}
     #trashcan{ width:100px; height:100px;  
       background-image:url("Trash_Can-128.png"); background-size:cover}
+    #messages {width:850px; height:150px; overflow:scroll}
    
   </style>
 </head>
@@ -68,7 +74,7 @@
           <option value="0">background</option>
           <option value="1" selected="true">foreground</option>
         </select>
-        <button onclick="javascript:clearcan(getActiveCanvasLayer());">Clear</button>
+        <button onclick="javascript:clearcan(getActiveCanvasLayer(),1);">Clear</button>
       </div>
       <hr>
       <div id="markercontrols">
@@ -83,11 +89,9 @@
       </div>
            
     </div>
-  </div>
   <div id="messages"></div>
-  <div id="board">
-    <div class="marker"></div>
   </div>
+  
 </body>
 
 </html>

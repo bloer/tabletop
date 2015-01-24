@@ -67,25 +67,70 @@ var tabletop_server = function() {
     };
 
     self.setupEventHandlers = function(){
+      self.prefix = "_TT";
+      self.markerprefix = self.prefix+"_MARKER";
+      
+      
+      self.gamestate = {
+        marker_counter: 0,
+        getIndex: function(id){ return id.substr(self.markerprefix.length); },
+        getId: function(index){ return self.markerprefix+index; },
+        markers: [],
+        paths: [],
+        background: {}
+      };
+      
       io.on('connection', function (socket) {
-        console.log("New connection opened from"+socket.conn.remoteAddress);
-        
-        socket.on('hello world',function(){
-          setTimeout(function(){
-            socket.emit('hello yourself',{
-              text:"12345"
-            });
-          },2000);
-        });
-        
-        socket.on('move marker',function(data){
-          console.log("received move marker to "+data.position.top+","+data.position.left);
-          socket.broadcast.emit('move marker',data);
-        });
+        var gstate = self.gamestate;
+        io.sockets.emit('message',"New connection opened from "+socket.conn.remoteAddress);
+        socket.emit('sync state',gstate);
         
         socket.on('disconnect',function() {
-          console.log("Client disconnected");
+          io.sockets.emit('message',"User at "+socket.conn.remoteAddress+" disconnected");
         });
+        
+        //handle markers
+        socket.on('add marker',function(data){
+          var newmarker = {
+            id: gstate.getId(gstate.marker_counter),
+            url: data.url,
+            label:data.label
+          };
+          gstate.markers[gstate.marker_counter++] = newmarker;
+          io.sockets.emit('add marker',newmarker);
+        });
+        socket.on('update marker',function(data){
+          //get the index from the id
+          var index = gstate.getIndex(data.id);
+          var old = gstate.markers[index];
+          if(!old){
+            console.log("Received update request for missing marker!");
+            return;
+          }
+          //don't replace, just merge
+          for(var attrname in data){old[attrname] = data[attrname];}
+          socket.broadcast.emit('update marker',data);
+        });
+        socket.on('remove marker',function(data){
+          var index = gstate.getIndex(data.id);
+          delete gstate.markers[index];
+          socket.broadcast.emit('remove marker',data);
+        });
+        
+        //handle canvas draw events
+        socket.on('add path',function(data){
+          gstate.paths.push(data);
+          socket.broadcast.emit('add path',data);
+        });
+        socket.on('clear canvas',function(data){
+          gstate.paths = gstate.paths.filter(function(path){
+            return path.layer!=data.layer;
+          });
+          socket.broadcast.emit('clear canvas',data);
+        });
+        
+        
+        
       });
     };
 
