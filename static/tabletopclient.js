@@ -1,7 +1,6 @@
 var socket = io();
   
 function getpoint(event){
-  console.log(event);
   parentpos = $(event.target).offset();
   return [(event.pageX-parentpos.left),(event.pageY-parentpos.top)];
 }
@@ -27,10 +26,13 @@ function placemarker(markerdata){
     return;
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
     //.data(markerdata)
-    .append("<img src='"+markerdata.url+"'/>")
+    
+    .append($("<div class=markerbody></div>")
+      .css({ background:markerdata.bg+" no-repeat center top", 'background-size':'cover'}))
+    //.text(markerdata.label)
     .append("<div class='markerbase'>"+markerdata.label+"</div>")
     .appendTo("#whiteboard-container")
-    .resizable({aspectRatio:true, autoHide: false, stop:function(){ sendmarkerupdate($(this)); } })
+    .resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); } })
     .draggable({stack:'.marker', stop:function(){ sendmarkerupdate($(this)); } })
     .on('mousedown',function(event){ event.stopPropagation(); })
     .show("scale");
@@ -47,30 +49,40 @@ function updatemarker(markerdata,marker){
   }
   if(markerdata.width)
     update.width = markerdata.width;
+  if(markerdata.height)
+    update.height = markerdata.height;
     
   if(!$.isEmptyObject(update)){
     marker.animate({
       top:markerdata.position.top,
       left:markerdata.position.left,
-      width:markerdata.width
+      width:markerdata.width,
+      height:markerdata.height
     });
   } 
 }
 
 function addmarker(){
   //make sure both label and url are filled
-  var url  =$("#addmarkerurl").val();
+  var bg = $("#addmarkerbg").val();
   var label=$("#addmarkerlabel").val();
-  $("<img>",{
-    src:url,
-    error: function(){ alert("unable to load image at "+url); },
-    load: function(){ 
-      var markerdata = { url:url, label:label};
-      socket.emit('add marker',markerdata);
-      //need to receive id from server!
-      //placemarker(markerdata);
-    }
-  });
+  var isimg = (bg.substr(0,5) == "data:" || bg.indexOf('.')>-1);
+  var markerdata = {bg:bg, label:label};
+  if(isimg){
+    markerdata.bg = "url('"+bg+"')";
+    $("<img>",{
+      src:bg,
+      error: function(){ alert("unable to load image "+bg); },
+    
+      load: function(){ 
+        //this is a valid image url
+        socket.emit('add marker',markerdata);
+      }
+    });
+  }
+  else
+    socket.emit('add marker',markerdata);
+  
 }
 
 function addpath(data){
@@ -86,12 +98,14 @@ function addpath(data){
 function sendmarkerupdate(marker){
   var data = marker.data("_TT_marker");
   data.width = marker.width();
+  data.height = marker.height();
   data.position = marker.position();
   
   //don't send the whole object...
   var reply = {
     id:data.id,
     width:data.width,
+    height:data.height,
     position:data.position
     //add other potential updates here
   }
@@ -118,6 +132,8 @@ $(function(){
     } 
   });
   $("#whiteboard-container").on('mousedown',function(event){ 
+    event.preventDefault();
+    event.stopPropagation();
     $(this).css({cursor:"crosshair"});
     var layer = getActiveCanvasLayer();
     var canvas = getCanvas(layer);
@@ -150,8 +166,6 @@ $(function(){
     clearcan(0);
     clearcan(1);
     $(".marker").remove();
-    console.log("Initializing...");
-    console.log(data);
     data.markers.forEach(placemarker);
     data.paths.forEach(addpath);
   });

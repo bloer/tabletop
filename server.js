@@ -93,7 +93,7 @@ var tabletop_server = function() {
         socket.on('add marker',function(data){
           var newmarker = {
             id: gstate.getId(gstate.marker_counter),
-            url: data.url,
+            bg: data.bg,
             label:data.label
           };
           gstate.markers[gstate.marker_counter++] = newmarker;
