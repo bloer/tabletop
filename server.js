@@ -91,11 +91,8 @@ var tabletop_server = function() {
         
         //handle markers
         socket.on('add marker',function(data){
-          var newmarker = {
-            id: gstate.getId(gstate.marker_counter),
-            bg: data.bg,
-            label:data.label
-          };
+          var newmarker = data;
+          newmarker.id = gstate.getId(gstate.marker_counter);
           gstate.markers[gstate.marker_counter++] = newmarker;
           io.sockets.emit('add marker',newmarker);
         });
@@ -129,7 +126,11 @@ var tabletop_server = function() {
           socket.broadcast.emit('clear canvas',data);
         });
         
-        
+        //handle background
+        socket.on('set background',function(data){
+          gstate.background = data;
+          socket.broadcast.emit('set background',data);
+        });
         
       });
     };

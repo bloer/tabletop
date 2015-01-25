@@ -1,7 +1,7 @@
 var socket = io();
   
 function getpoint(event){
-  parentpos = $(event.target).offset();
+  parentpos = $(event.currentTarget).offset();
   return [(event.pageX-parentpos.left),(event.pageY-parentpos.top)];
 }
 
@@ -13,6 +13,27 @@ function getCanvas(layer){
   return $("#whiteboard-container canvas").get(layer);
 }
 
+function testimgurl(s){
+  return (s.substr(0,5) == "data:" || s.indexOf('.')>-1)
+}
+
+function wrapimgurl(s){
+  if(testimgurl(s))
+    return "url('"+s+"')";
+  return s;
+}
+
+function setbackground(data){
+  console.log("setbackground");
+  console.log(data);
+  if(!data){
+    //this is invoked by the form
+    data = {bg:wrapimgurl($("#setbackgroundbg").val())}
+    socket.emit('set background',data);
+  }
+  $("#whiteboard-container").css({background:data.bg+" no-repeat",'background-size':'100% 100%'});
+}
+
 function clearcan(layer,emit){
   var wb = getCanvas(layer);
   var ctx = wb.getContext('2d');
@@ -22,11 +43,13 @@ function clearcan(layer,emit){
 }
 
 function placemarker(markerdata){
+  console.log("placemarker");
+  console.log(markerdata);
   if(!markerdata)
     return;
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
     //.data(markerdata)
-    
+    .toggleClass("circle",markerdata.circle)
     .append($("<div class=markerbody></div>")
       .css({ background:markerdata.bg+" no-repeat center top", 'background-size':'cover'}))
     //.text(markerdata.label)
@@ -66,10 +89,12 @@ function addmarker(){
   //make sure both label and url are filled
   var bg = $("#addmarkerbg").val();
   var label=$("#addmarkerlabel").val();
-  var isimg = (bg.substr(0,5) == "data:" || bg.indexOf('.')>-1);
-  var markerdata = {bg:bg, label:label};
+  var circle = $("#addmarkercirc").is(":checked");
+  var isimg = testimgurl(bg);
+  var markerdata = {bg:wrapimgurl(bg), label:label, circle:circle};
+  console.log("addmarker");
+  console.log(markerdata);
   if(isimg){
-    markerdata.bg = "url('"+bg+"')";
     $("<img>",{
       src:bg,
       error: function(){ alert("unable to load image "+bg); },
@@ -124,7 +149,9 @@ function removemarker(id,emit){
 $(function(){
   //ui functionality
   $("#whiteboard").get(0).getContext('2d').strokeStyle='red';
+  $("#whiteboard").get(0).getContext('2d').lineWidth=2;
   $("#whiteboard_bg").get(0).getContext('2d').strokeStyle='black';
+  $("#whiteboard_bg").get(0).getContext('2d').lineWidth=2;
   $("#trashcan").droppable({accept:".marker", tolerance:"touch", 
     drop:function(event,ui){
       event.stopPropagation(); //try to prevent draggable update
@@ -168,16 +195,18 @@ $(function(){
     $(".marker").remove();
     data.markers.forEach(placemarker);
     data.paths.forEach(addpath);
+    if(data.background)
+      setbackground(data.background);
   });
   
   socket.on('add marker', placemarker);
   socket.on('update marker',updatemarker);
-  
   socket.on('remove marker',function(data){ removemarker(data.id); });
   
   socket.on('add path',addpath);
-  
   socket.on('clear canvas',function(data){ clearcan(data.layer); });
+  
+  socket.on('set background',setbackground);
   
   socket.on('message',function(msg){ $("#messages").append("<br>"+msg); });
   
