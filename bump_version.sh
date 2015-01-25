@@ -9,10 +9,11 @@ NEWVERSION="$1"
 
 OLDVERSION=`cat VERSION`
 #escape periods
-OLDVERSION=${OLDVERSION//./\.}
+OLDVERSION="${OLDVERSION//./\.}"
 
-FILELIST="package.json server.js static/index.html static/tabletopclient.js"
+FILELIST="VERSION package.json server.js static/index.html static/tabletopclient.js"
 for file in $FILELIST ; do
     sed "s/$OLDVERSION/$NEWVERSION/g" $file >${file}.tmp
+    chmod --reference=${file} ${file.tmp}
     mv ${file}.tmp $file
 done
