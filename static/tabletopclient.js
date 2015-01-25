@@ -30,7 +30,7 @@ function placemarker(markerdata){
     .append("<img src='"+markerdata.url+"'/>")
     .append("<div class='markerbase'>"+markerdata.label+"</div>")
     .appendTo("#whiteboard-container")
-    .resizable({aspectRatio:true, autoHide: true, stop:function(){ sendmarkerupdate($(this)); } })
+    .resizable({aspectRatio:true, autoHide: false, stop:function(){ sendmarkerupdate($(this)); } })
     .draggable({stack:'.marker', stop:function(){ sendmarkerupdate($(this)); } })
     .on('mousedown',function(event){ event.stopPropagation(); })
     .show("scale");
