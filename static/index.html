@@ -26,7 +26,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 
 <head>
-	<title>Virtual Tabletop 0.1.1</title>
+	<title>Virtual Tabletop 0.2.0</title>
 	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
 	<meta name="generator" content="Geany 0.21" />
   <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
@@ -39,18 +39,18 @@
   
   <style>
     #main {width:1200px; height:700px}
-    #whiteboard-container {width:1050px; height:100%; float:left; border:1px solid blue}
+    #whiteboard-container {width:1050px; height:100%; float:left; border:1px solid blue; z-index:-1}
     #sideboard {width:145px; height:100%; float:right}
-    #sideboard input,label {width:120px}
-    #whiteboard_bg { z-index:-1 }
+    #sideboard input[type='text'],label {width:120px}
+    #whiteboard_bg { z-index:0 }
     #whiteboard {z-index:1}
-    
+    div.circle {border-radius:50%}
     .marker {width:50px; height:50px;position:absolute; z-index:3; text-align:center; border:0px solid blue;}
     
     .marker img {width:inherit; border:1px solid black 
         /*transform:rotate3d(1,1,0,45deg); -webkit-transform:rotate3d(1,1,0,45deg);*/ }
     .markerbody {width:100%;height:100%; border:0px solid black;
-        background-repeat:no-repeat; background-size:cover}
+        background-repeat:no-repeat; background-size:cover; border-radius:inherit}
     .markerbase { background-color:white; width:inherit; border:0px solid black;
           /*transform:rotate3d(1,0,0.4,45deg); -webkit-transform:rotate3d(-1,0,0.3,45deg);*/ 
           /*position:relative; top:-20px;*/ font-weight:bold; text-align:center;vertical-align:middle}
@@ -63,14 +63,24 @@
 </head>
 
 <body>
-	<h1>Virtual Tabletop 0.1.1</h1>
+	<h1>Virtual Tabletop 0.2.0</h1>
   <div id="main">
     <div id="whiteboard-container">
       <canvas id="whiteboard_bg" width="1050" height="700"></canvas>
       <canvas id="whiteboard" width="1050" height="700"></canvas>
     </div>
     <div id="sideboard">
+      <div id="bgcontrols">
+        <h3>Background</h3>
+        <form id="setbackground" action="javascript:setbackground();">
+          <label for="setbackgroundbg">URL or color</label>
+          <input type="text" id="setbackgroundbg">
+          <button>Set background</button>
+        </form>
+      </div>
+      <hr>
       <div id="drawcontrols">
+        <h3>Whiteboard</h3>
         <label for="drawto">Draw to:</label>
         <select id="drawto" name="drawto">
           <option value="0">background</option>
@@ -80,11 +90,14 @@
       </div>
       <hr>
       <div id="markercontrols">
+        <h3>Markers</h3>
         <form id="addmarker" action="javascript:addmarker();">
           <label for="addmarkerbg">URL or color</label><br>
           <input type="text" id="addmarkerbg">
           <label for="addmarkerlabel">Label (optional)</label><br>
-          <input type="text" id="addmarkerlabel" >
+          <input type="text" id="addmarkerlabel">
+          <input type="checkbox" id="addmarkercirc" value="circle" name="circle">
+          <label for="addmarkercirc">Circle</label>
           <button >Add new marker</button>
         </form>
         <div id="trashcan"></div>
