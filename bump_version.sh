@@ -14,6 +14,6 @@ OLDVERSION="${OLDVERSION//./\.}"
 FILELIST="VERSION package.json server.js static/index.html static/tabletopclient.js"
 for file in $FILELIST ; do
     sed "s/$OLDVERSION/$NEWVERSION/g" $file >${file}.tmp
-    chmod --reference=${file} ${file.tmp}
+    chmod --reference=${file} ${file}.tmp
     mv ${file}.tmp $file
 done
