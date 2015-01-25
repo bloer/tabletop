@@ -26,7 +26,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 
 <head>
-	<title>Virtual Tabletop 0.1.0</title>
+	<title>Virtual Tabletop 0.1.1</title>
 	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
 	<meta name="generator" content="Geany 0.21" />
   <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
@@ -45,13 +45,15 @@
     #whiteboard_bg { z-index:-1 }
     #whiteboard {z-index:1}
     
-    .marker {width:50px; position:absolute; z-index:3;
-              
-              }
-    .marker img {width:inherit; transform:rotate3d(1,1,0,45deg); -webkit-transform:rotate3d(1,1,0,45deg);border:1px solid black;}
-    .marker .markerbase { height:20px; width:inherit; background-color:white; border:1px solid black;
-          transform:rotate3d(1,0,0.4,45deg); -webkit-transform:rotate3d(-1,0,0.3,45deg); 
-          position:relative; top:-20px;left:2px; text-align:center}
+    .marker {width:50px; height:50px;position:absolute; z-index:3; text-align:center; border:0px solid blue;}
+    
+    .marker img {width:inherit; border:1px solid black 
+        /*transform:rotate3d(1,1,0,45deg); -webkit-transform:rotate3d(1,1,0,45deg);*/ }
+    .markerbody {width:100%;height:100%; border:0px solid black;
+        background-repeat:no-repeat; background-size:cover}
+    .markerbase { background-color:white; width:inherit; border:0px solid black;
+          /*transform:rotate3d(1,0,0.4,45deg); -webkit-transform:rotate3d(-1,0,0.3,45deg);*/ 
+          /*position:relative; top:-20px;*/ font-weight:bold; text-align:center;vertical-align:middle}
     canvas {position:absolute}
     #trashcan{ width:100px; height:100px;  
       background-image:url("Trash_Can-128.png"); background-size:cover}
@@ -61,11 +63,11 @@
 </head>
 
 <body>
-	<h1>Virtual Tabletop 0.1.0</h1>
+	<h1>Virtual Tabletop 0.1.1</h1>
   <div id="main">
     <div id="whiteboard-container">
-      <canvas id="whiteboard_bg" width="850" height="700"></canvas>
-      <canvas id="whiteboard" width="850" height="700"></canvas>
+      <canvas id="whiteboard_bg" width="1050" height="700"></canvas>
+      <canvas id="whiteboard" width="1050" height="700"></canvas>
     </div>
     <div id="sideboard">
       <div id="drawcontrols">
@@ -79,8 +81,8 @@
       <hr>
       <div id="markercontrols">
         <form id="addmarker" action="javascript:addmarker();">
-          <label for="addmarkerurl">URL</label><br>
-          <input type="text" id="addmarkerurl">
+          <label for="addmarkerbg">URL or color</label><br>
+          <input type="text" id="addmarkerbg">
           <label for="addmarkerlabel">Label (optional)</label><br>
           <input type="text" id="addmarkerlabel" >
           <button >Add new marker</button>
