@@ -165,7 +165,11 @@ $(function(){
       removemarker(ui.draggable.attr("id"), true);
     } 
   });
-  $("#whiteboard-container").on('mousedown touchstart',function(event){ 
+  $("#whiteboard-container").on('mousedown touchstart',function(event){
+    if($(event.target).hasClass("marker") || 
+       $(event.target).hasClass("markerbody") || 
+       $(event.target).hasClass("markerbase") )
+      return;
     event.preventDefault();
     event.stopPropagation();
     $(this).css({cursor:"crosshair"});
