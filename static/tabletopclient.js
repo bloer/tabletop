@@ -2,7 +2,12 @@ var socket = io();
   
 function getpoint(event){
   parentpos = $(event.currentTarget).offset();
-  return [(event.pageX-parentpos.left),(event.pageY-parentpos.top)];
+  var X = event.pageX, Y=event.pageY;
+  if(X===undefined){//work with touches too
+    X = event.originalEvent.touches[0].pageX;
+    Y = event.originalEvent.touches[0].pageY;
+  }
+  return [(X-parentpos.left),(Y-parentpos.top)];
 }
 
 function getActiveCanvasLayer(){
@@ -50,10 +55,11 @@ function placemarker(markerdata){
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
     //.data(markerdata)
     .toggleClass("circle",markerdata.circle)
+    .toggleClass("threed",markerdata.threed)
     .append($("<div class=markerbody></div>")
       .css({ background:markerdata.bg+" no-repeat center top", 'background-size':'cover'}))
     //.text(markerdata.label)
-    .append("<div class='markerbase'>"+markerdata.label+"</div>")
+    .append("<div class='markerbase'><span>"+markerdata.label+"</span></div>")
     .appendTo("#whiteboard-container")
     .resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); } })
     .draggable({stack:'.marker', stop:function(){ sendmarkerupdate($(this)); } })
@@ -90,8 +96,9 @@ function addmarker(){
   var bg = $("#addmarkerbg").val();
   var label=$("#addmarkerlabel").val();
   var circle = $("#addmarkercirc").is(":checked");
+  var threed = $("#addmarker3d").is(":checked");
   var isimg = testimgurl(bg);
-  var markerdata = {bg:wrapimgurl(bg), label:label, circle:circle};
+  var markerdata = {bg:wrapimgurl(bg), label:label, circle:circle, threed:threed};
   console.log("addmarker");
   console.log(markerdata);
   if(isimg){
@@ -158,7 +165,7 @@ $(function(){
       removemarker(ui.draggable.attr("id"), true);
     } 
   });
-  $("#whiteboard-container").on('mousedown',function(event){ 
+  $("#whiteboard-container").on('mousedown touchstart',function(event){ 
     event.preventDefault();
     event.stopPropagation();
     $(this).css({cursor:"crosshair"});
@@ -169,15 +176,18 @@ $(function(){
     ctx.beginPath();
     ctx.moveTo(pt[0],pt[1]);
     var points = [pt];
-    $(this).on('mousemove',function(event){
+    $(this).on('mousemove touchmove',function(event){
+      event.preventDefault();
+      event.stopPropagation();
        pt = getpoint(event);
        ctx.lineTo(pt[0],pt[1]);
        ctx.stroke();
        points.push(pt);
     });
-    $(this).on('mouseup',function(event){
-      $(this).off('mouseup');
-      $(this).off('mousemove');
+    $(this).on('mouseup mouseout touchend',function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      $(this).off('mousemove touchmove mouseout mouseup touchend');
       $(this).css({cursor:"auto"});
       socket.emit('add path',{
         layer: layer,
