@@ -1,5 +1,6 @@
 var socket = io();
-  
+var graphicsLock=false;
+
 function getpoint(event){
   parentpos = $(event.currentTarget).offset();
   var X = event.pageX, Y=event.pageY;
@@ -118,13 +119,17 @@ function addmarker(){
 }
 
 function addpath(data){
-  var ctx = getCanvas(data.layer).getContext('2d');
-  ctx.beginPath();
-  ctx.moveTo(data.points[0][0],data.points[0][1]);
-  data.points.forEach(function(point){
-    ctx.lineTo(point[0],point[1]);
-  });
-  ctx.stroke();
+  if(!graphicsLock){
+    var ctx = getCanvas(data.layer).getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(data.points[0][0],data.points[0][1]);
+    data.points.forEach(function(point){
+      ctx.lineTo(point[0],point[1]);
+    });
+    ctx.stroke();
+  }else{
+    setTimeout(function(){addpath(data);},200);
+  }
 }
 
 function sendmarkerupdate(marker){
@@ -170,6 +175,7 @@ $(function(){
        $(event.target).hasClass("markerbody") || 
        $(event.target).hasClass("markerbase") )
       return;
+    graphicsLock = true;
     event.preventDefault();
     event.stopPropagation();
     $(this).css({cursor:"crosshair"});
@@ -197,6 +203,7 @@ $(function(){
         layer: layer,
         points: points
       });
+      graphicsLock = false;
     });
   });
   
