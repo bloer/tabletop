@@ -74,7 +74,9 @@
         <h3>Background</h3>
         <form id="setbackground" action="javascript:setbackground();">
           <label for="setbackgroundbg">URL or color</label>
-          <input type="text" id="setbackgroundbg">
+          <input type="text" id="setbackgroundbg"><br>
+          <label for="setbackgroundfile">or file</label>
+          <input type="file" id="setbackgroundfile" accept="image/*" data-target="setbackgroundbg" onchange="convertFile(this)">
           <button>Set background</button>
         </form>
       </div>
@@ -93,7 +95,9 @@
         <h3>Markers</h3>
         <form id="addmarker" action="javascript:addmarker();">
           <label for="addmarkerbg">URL or color</label><br>
-          <input type="text" id="addmarkerbg">
+          <input type="text" id="addmarkerbg"><br>
+          <label for="addmarkerfile">or file</label>
+          <input type="file" id="addmarkerfile" accept="image/*" data-target="addmarkerbg" onchange="convertFile(this)">
           <label for="addmarkerlabel">Label (optional)</label><br>
           <input type="text" id="addmarkerlabel">
           <input type="checkbox" id="addmarkercirc" value="circle" name="circle">

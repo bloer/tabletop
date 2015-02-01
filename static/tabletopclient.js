@@ -11,6 +11,21 @@ function getpoint(event){
   return [(X-parentpos.left),(Y-parentpos.top)];
 }
 
+function convertFile(source){
+  var files = source.files;
+  var file = files[0];
+  var target = "#"+$(source).data("target");
+  if (files && file) {
+    var reader = new FileReader();
+    reader.onload = function(readerEvt) {
+      $(target).val(readerEvt.target.result);
+      $(source).parent("form").get(0).submit();
+    };
+    reader.readAsDataURL(file);
+  }
+  return false;
+}
+
 function getActiveCanvasLayer(){
   return $("#drawto").val();
 }
@@ -30,8 +45,6 @@ function wrapimgurl(s){
 }
 
 function setbackground(data){
-  console.log("setbackground");
-  console.log(data);
   if(!data){
     //this is invoked by the form
     data = {bg:wrapimgurl($("#setbackgroundbg").val())}
@@ -49,8 +62,6 @@ function clearcan(layer,emit){
 }
 
 function placemarker(markerdata){
-  console.log("placemarker");
-  console.log(markerdata);
   if(!markerdata)
     return;
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
@@ -100,8 +111,6 @@ function addmarker(){
   var threed = $("#addmarker3d").is(":checked");
   var isimg = testimgurl(bg);
   var markerdata = {bg:wrapimgurl(bg), label:label, circle:circle, threed:threed};
-  console.log("addmarker");
-  console.log(markerdata);
   if(isimg){
     $("<img>",{
       src:bg,
