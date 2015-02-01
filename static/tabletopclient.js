@@ -1,13 +1,15 @@
 var socket = io();
 var graphicsLock=false;
 
-function getpoint(event){
+function getpoint(event,ignoreparent){
   parentpos = $(event.currentTarget).offset();
   var X = event.pageX, Y=event.pageY;
   if(X===undefined){//work with touches too
     X = event.originalEvent.touches[0].pageX;
     Y = event.originalEvent.touches[0].pageY;
   }
+  if(ignoreparent)
+    return [X,Y];
   return [(X-parentpos.left),(Y-parentpos.top)];
 }
 
@@ -44,13 +46,51 @@ function wrapimgurl(s){
   return s;
 }
 
-function setbackground(data){
-  if(!data){
-    //this is invoked by the form
-    data = {bg:wrapimgurl($("#setbackgroundbg").val())}
-    socket.emit('set background',data);
+function setbackgroundcropping(){
+  //see if it's cropped at all
+  var selector = $("#cropselector");
+  var img = $("#uncroppedbg");
+  var data = {background:wrapimgurl(img.attr("src"))+" no-repeat"};
+  if(selector.size()){
+    var target = $("#whiteboard-container");
+    var xscale = (target.width() / selector.width());
+    var yscale = (target.height() / selector.height());
+    /*
+    if($("#fillmax").is(":checked")){
+      if(xscale > yscale)
+        xscale = yscale;
+      if(yscale > xscale)
+        yscale = xscale;
+    }
+    */
+    var initpos = selector.css("background-position").split(' ');
+    var left = xscale*parseFloat(initpos[0]);
+    var top = yscale*parseFloat(initpos[1]);
+    data['background-size'] = img.width()*xscale+"px "+img.height()*yscale+"px";
+    data['background-position'] = left+"px "+top+"px";
+    data['background-repeat'] = 'no-repeat';
   }
-  $("#whiteboard-container").css({background:data.bg+" no-repeat",'background-size':'100% 100%'});
+  $("#bgimagecrop").dialog("close");
+  console.log(data);
+  setbackground(data,true);
+}
+
+function setbackground(data,emit){
+  if(!data){
+    //this is invoked by the side form
+    emit = true;
+    var s = $("#setbackgroundbg").val();
+    if(testimgurl(s)){
+      //crop it first
+      $("#uncroppedbg").attr("src",s);
+      $("#bgimagecrop").dialog("open");
+      return false;
+    }
+    data = {background:wrapimgurl($("#setbackgroundbg").val())}
+  }
+  $("#whiteboard-container").css(data);
+  if(emit)
+    socket.emit('set background',data);
 }
 
 function clearcan(layer,emit){
@@ -169,6 +209,70 @@ function removemarker(id,emit){
 
 $(function(){
   //ui functionality
+  $("#bgimagecrop").dialog({
+    autoOpen:false,
+    show: "fold",
+    hide: "puff",
+    draggable:false,
+    resizable:false,
+    width:500,
+    height:500,
+    open: function(){
+      $("#cropselector").remove();
+      $("#uncroppedbg").css("opacity",1);
+      //$("#uncroppedbg").on("click",function(event){
+        //$("#cropselector").remove();
+        //$(this).css("opacity",1);
+      //});
+      $("#cropdiv").on("mousedown touchstart",function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        var img = $("#uncroppedbg");
+        $("#cropselector").remove();
+        img.css("opacity",0.3);
+        var start = getpoint(event,true);
+        var bgpos = getpoint(event);
+        var selector = $("<div id='cropselector'></div>")
+          .css({'background-image':wrapimgurl(img.attr("src")),
+                'background-size':img.width()+"px "+img.height()+"px",
+                'background-position':(-bgpos[0])+"px "+(-bgpos[1])+"px",
+                'background-repeat':'no-repeat',
+                'background-origin':'border-box',
+                'width':1,
+                'height':1
+              })
+          .appendTo("#cropdiv")
+          .offset({left:start[0], top:start[1]});
+        $("#cropdiv").on("mousemove touchmove",function(moveevent){
+          var mousept = getpoint(moveevent,true);
+          var newwidth = mousept[0]-start[0], newheight=mousept[1]-start[1];
+          var newoffset = {left:start[0], top:start[1]};
+          var newbgpos = [bgpos[0],bgpos[1]];
+          if(mousept[0]<start[0]){
+            newoffset.left = mousept[0];
+            newbgpos[0] = getpoint(moveevent)[0];
+          }
+          if(mousept[1]<start[1]){
+            newoffset.top = mousept[1];
+            newbgpos[1] = getpoint(moveevent)[1];
+          }
+          selector.offset(newoffset);
+          selector.css('background-position',(-newbgpos[0])+"px "+(-newbgpos[1])+"px");
+          selector.width(Math.abs(newwidth)).height(Math.abs(newheight));
+          //selector.width(event.offsetX-selector.offset().left).height(event.offsetY-selector.offset().top);
+        });
+        $("#cropdiv").on("touchend mouseup",function(endevent){
+          $(this).off("mousemove touchmove touchend mouseup");
+          endevent.preventDefault();
+          endevent.stopPropagation();
+          if(selector.width() < 10 || selector.height()<10){
+            selector.remove();
+            img.css("opacity",1);
+          }
+        });
+      });
+    }
+  });
   $("#whiteboard").get(0).getContext('2d').strokeStyle='red';
   $("#whiteboard").get(0).getContext('2d').lineWidth=2;
   $("#whiteboard_bg").get(0).getContext('2d').strokeStyle='black';
