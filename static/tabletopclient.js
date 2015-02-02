@@ -1,6 +1,36 @@
 var socket = io();
 var graphicsLock=false;
 
+function centerme(element,to){
+  element.css("position","absolute");
+  to = to || element.parent();
+  element.offset({
+    left: to.offset().left + to.width()/2. - element.width()/2.,
+    top: to.offset().top +to.height()/2. - element.height()/2.
+  });
+}
+
+function toggleTransformHierarchy(element){
+  if(!element || element.size()<1 || element == $("html"))
+    return;
+  element.toggleClass("notransform");
+  return toggleTransformHierarchy(element.parent());
+}
+
+
+
+function scaletofit(element,to){
+  to = to || element.parent();
+  element.css({"transform":"none", "transform-origin":"center"});
+  toggleTransformHierarchy(to);
+  centerme(element,to);
+  var x = to.innerWidth() / element.width();
+  var y = to.innerHeight() / element.height();
+  var min = x<y ? x : y;
+  element.css("transform","scale("+min+")");
+  toggleTransformHierarchy(to);
+}
+
 function getpoint(event,ignoreparent){
   parentpos = $(event.currentTarget).offset();
   var X = event.pageX, Y=event.pageY;
@@ -104,6 +134,7 @@ function clearcan(layer,emit){
 function placemarker(markerdata){
   if(!markerdata)
     return;
+  var marker = 
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
     //.data(markerdata)
     .toggleClass("circle",markerdata.circle)
@@ -111,13 +142,20 @@ function placemarker(markerdata){
     .append($("<div class=markerbody></div>")
       .css({ background:markerdata.bg+" no-repeat center top", 'background-size':'cover'}))
     //.text(markerdata.label)
-    .append("<div class='markerbase'><span>"+markerdata.label+"</span></div>")
+    .append("<div class='markerbase'></div>")
     .appendTo("#whiteboard-container")
-    .resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); } })
-    .draggable({stack:'.marker', stop:function(){ sendmarkerupdate($(this)); } })
-    .on('mousedown',function(event){ event.stopPropagation(); })
-    .show("scale");
-  setTimeout(function(){ updatemarker(markerdata);},500);
+    .on('mousedown',function(event){ event.stopPropagation(); });
+  var label = $("<div class='markerlabel'>"+markerdata.label+"</div>");
+  if(markerdata.bg.substr(0,3)=="url" || markerdata.threed)
+    label.appendTo(marker.find(".markerbase"));
+  else
+    label.appendTo(marker.find(".markerbody"));
+  marker.resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); },
+                    resize:function(event,ui){ scaletofit($(this).find(".markerlabel")); }
+                  })
+        .draggable({stack:'.marker', stop:function(){ sendmarkerupdate($(this)); } })
+    
+  setTimeout(function(){ updatemarker(markerdata); marker.show("scale",function(){scaletofit(label);});},200);
 }
 
 function updatemarker(markerdata,marker){

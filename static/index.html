@@ -45,15 +45,18 @@
     #whiteboard_bg { z-index:0 }
     #whiteboard {z-index:1}
     div.circle {border-radius:50%}
-    .marker {width:50px; height:50px;position:absolute; z-index:3; text-align:center; border:0px solid blue;}
+    .marker {width:50px; height:50px;position:absolute; z-index:3; text-align:center; border:0px solid blue;cursor:move;}
     
     .marker img {width:inherit; border:1px solid black }
-    .marker.threed {transform:rotate3d(1,1,0,45deg); -webkit-transform:rotate3d(1,1,0,45deg); border-width:2px 3px 1px 1px; border-style:solid; border-color:black}
+    .marker.threed {/*-webkit-transform:rotate3d(1,1,0,45deg); transform:rotate3d(1,1,0,45deg);*/
+                    -webkit-transform:skew(10deg,10deg);transform:skew(10deg,10deg);
+                    border-width:2px 3px 1px 1px; border-style:solid; border-color:black}
     .markerbody {width:100%;height:100%; border:0px solid black;
         background-repeat:no-repeat; background-size:cover; border-radius:inherit}
     .markerbase { background-color:none; width:inherit; border:0px solid black;
-         font-weight:bold; text-align:center;vertical-align:middle}
-    .marker.threed .markerbase {transform:skewX(-45deg);-webkit-transform:skewX(-45deg);position:relative; left:-10px;top:0px; border-style:solid; bprder-color:black; border-width:1px 3px 3px 1px; background-color:white; min-height:1em}
+         text-align:center;vertical-align:middle}
+    .marker.threed .markerbase {-webkit-transform:skewX(-45deg);transform:skewX(-45deg);position:relative; left:-10px;top:0px; border-style:solid; bprder-color:black; border-width:1px 3px 3px 1px; background-color:white; min-height:1.1em}
+    .markerlabel {/*font-size:100px;*/ padding:0; position:absolute; text-align:center; transform-origin:center; white-space:nowrap; }
     canvas {position:absolute}
     #trashcan{ width:100px; height:100px;  
       background-image:url("Trash_Can-128.png"); background-size:cover}
@@ -61,6 +64,7 @@
     #bgimagecrop {background-color:gray}
     #uncroppedbg {width:100%;}
     #cropselector {border:2px solid black; position:absolute;}
+    .notransform { -webkit-transform:none !important; transform:none !important; }
   </style>
 </head>
 
