@@ -1,6 +1,11 @@
 var socket = io();
 var graphicsLock=false;
 
+function showreleasenotes()
+{
+  $("#releasenotes").dialog("open");
+}
+
 function centerme(element,to){
   element.css("position","absolute");
   to = to || element.parent();
