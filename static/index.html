@@ -65,6 +65,7 @@
     #uncroppedbg {width:100%;}
     #cropselector {border:2px solid black; position:absolute;}
     .notransform { -webkit-transform:none !important; transform:none !important; }
+    #releasenotes {display:none}
   </style>
 </head>
 
@@ -76,6 +77,7 @@
       <canvas id="whiteboard" width="1050" height="700"></canvas>
     </div>
     <div id="sideboard">
+      <a href="javascript:$('#releasenotes').dialog('open');">New features!</a>
       <div id="bgcontrols">
         <h3>Background</h3>
         <form id="setbackground" action="javascript:setbackground();">
@@ -132,6 +134,23 @@
         <img id="uncroppedbg" />
       </div>
     </form>
+  </div>
+  
+  <div id="releasenotes">
+    <h4>New features in version 0.3</h4>
+    <ul>
+      <li>Hold down ctrl key and drag to clone a marker</li>
+      <li>Double click on a marker to edit the label</li>
+      <li>Upload marker or background images from local files (or drag and drop)</li>
+      <li>Crop background images after uploading</li>
+      <li>Miscellaneous bug fixes, including
+        <ul>
+          <li>Label text scales with the marker</li>
+          <li>Drawing won't end when you move over a marker</li>
+          <li>Lines won't jump when two people draw at same time</li>
+        </ul>
+      </li>
+    </ul>
   </div>
   
 </body>

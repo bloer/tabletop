@@ -101,7 +101,6 @@ function setbackgroundcropping(){
     data['background-repeat'] = 'no-repeat';
   }
   $("#bgimagecrop").dialog("close");
-  console.log(data);
   setbackground(data,true);
 }
 
@@ -144,16 +143,36 @@ function placemarker(markerdata){
     //.text(markerdata.label)
     .append("<div class='markerbase'></div>")
     .appendTo("#whiteboard-container")
-    .on('mousedown',function(event){ event.stopPropagation(); });
+    .on('mousedown',function(event){ 
+      event.stopPropagation(); 
+      if(event.ctrlKey)
+        $(this).draggable("option","helper","clone");
+     })
+     .on("dblclick",function(event){
+        var label = $(this).find(".markerlabel");
+        if(label.width() < 50) label.width(50);
+        if(label.height() < 20) label.height(20); 
+        $("<input type='text' style='position:absolute;width:100%;height:100%';>")
+        .val(label.text())
+        .appendTo(label).offset(label.offset()).focus().select()
+        .on('change',function(event,ui){
+          var marker = $(this).parents(".marker");
+          label.text($(this).val());
+          sendmarkerupdate(marker);
+          scaletofit(label);
+        });
+     })
+     ;
   var label = $("<div class='markerlabel'>"+markerdata.label+"</div>");
-  if(markerdata.bg.substr(0,3)=="url" || markerdata.threed)
-    label.appendTo(marker.find(".markerbase"));
+  if(markerdata.bg.substr(0,3)=="url" || markerdata.threed){
+    label.appendTo(marker.find(".markerbase").css("min-height","1.1em"));
+  }
   else
     label.appendTo(marker.find(".markerbody"));
   marker.resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); },
                     resize:function(event,ui){ scaletofit($(this).find(".markerlabel")); }
                   })
-        .draggable({stack:'.marker', stop:function(){ sendmarkerupdate($(this)); } })
+        .draggable({stack:'.marker', stop:function(event,ui){ sendmarkerupdate($(this),event,ui); } })
     
   setTimeout(function(){ updatemarker(markerdata); marker.show("scale",function(){scaletofit(label);});},200);
 }
@@ -161,6 +180,8 @@ function placemarker(markerdata){
 function updatemarker(markerdata,marker){
   marker = marker || $("#"+markerdata.id);
   marker.data("_TT_marker",markerdata);
+  marker.find(".markerlabel").text(markerdata.label);
+  //note todo: should remove min-height from non-3d labels if null
   var update = {};
   if(markerdata.position){
     update.left = markerdata.position.left;
@@ -170,15 +191,9 @@ function updatemarker(markerdata,marker){
     update.width = markerdata.width;
   if(markerdata.height)
     update.height = markerdata.height;
-    
-  if(!$.isEmptyObject(update)){
-    marker.animate({
-      top:markerdata.position.top,
-      left:markerdata.position.left,
-      width:markerdata.width,
-      height:markerdata.height
-    });
-  } 
+  if(!$.isEmptyObject(update) || markerdata.label){
+    marker.animate(update,function(){ scaletofit(marker.find(".markerlabel")); });
+  }
 }
 
 function addmarker(){
@@ -219,22 +234,34 @@ function addpath(data){
   }
 }
 
-function sendmarkerupdate(marker){
+function sendmarkerupdate(marker,event,ui){
   var data = marker.data("_TT_marker");
-  data.width = marker.width();
-  data.height = marker.height();
-  data.position = marker.position();
-  
-  //don't send the whole object...
-  var reply = {
-    id:data.id,
-    width:data.width,
-    height:data.height,
-    position:data.position
-    //add other potential updates here
+  if(marker.draggable("option","helper")=="clone"){
+    //actually clone instead of update
+    marker.draggable("option","helper","original");
+    var datacopy={};
+    $.extend(datacopy,data);
+    delete datacopy['id'];
+    datacopy.position = ui.position;
+    socket.emit('add marker',datacopy);
   }
+  else{
+    data.width = marker.width();
+    data.height = marker.height();
+    data.position = marker.position();
+    data.label = marker.find(".markerlabel").text();
+    //don't send the whole object...
+    var reply = {
+      id:data.id,
+      width:data.width,
+      height:data.height,
+      position:data.position,
+      label:data.label
+      //add other potential updates here
+    }
   
-  socket.emit('update marker',reply);
+    socket.emit('update marker',reply);
+  }
 }
 
 
@@ -247,13 +274,21 @@ function removemarker(id,emit){
 
 $(function(){
   //ui functionality
+  $("#releasenotes").dialog({
+    autoOpen:false,
+    show:"fold",
+    hide:"fade",
+    draggable:false,
+    resizable:false,
+    width:600
+  });
   $("#bgimagecrop").dialog({
     autoOpen:false,
     show: "fold",
     hide: "puff",
     draggable:false,
     resizable:false,
-    width:500,
+    width:700,
     height:500,
     open: function(){
       $("#cropselector").remove();
@@ -345,10 +380,10 @@ $(function(){
        ctx.stroke();
        points.push(pt);
     });
-    $(this).on('mouseup mouseout touchend',function(event){
+    $(this).on('mouseup mouseleave touchend',function(event){
       event.preventDefault();
       event.stopPropagation();
-      $(this).off('mousemove touchmove mouseout mouseup touchend');
+      $(this).off('mousemove touchmove mouseleave mouseup touchend');
       $(this).css({cursor:"auto"});
       socket.emit('add path',{
         layer: layer,
