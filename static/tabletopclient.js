@@ -4,6 +4,7 @@ var graphicsLock=false;
 function showreleasenotes()
 {
   $("#releasenotes").dialog("open");
+  return false;
 }
 
 function centerme(element,to){
