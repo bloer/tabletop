@@ -1,14 +1,61 @@
 var socket = io();
 var graphicsLock=false;
 
-function getpoint(event){
+function centerme(element,to){
+  element.css("position","absolute");
+  to = to || element.parent();
+  element.offset({
+    left: to.offset().left + to.width()/2. - element.width()/2.,
+    top: to.offset().top +to.height()/2. - element.height()/2.
+  });
+}
+
+function toggleTransformHierarchy(element){
+  if(!element || element.size()<1 || element == $("html"))
+    return;
+  element.toggleClass("notransform");
+  return toggleTransformHierarchy(element.parent());
+}
+
+
+
+function scaletofit(element,to){
+  to = to || element.parent();
+  element.css({"transform":"none", "transform-origin":"center"});
+  toggleTransformHierarchy(to);
+  centerme(element,to);
+  var x = to.innerWidth() / element.width();
+  var y = to.innerHeight() / element.height();
+  var min = x<y ? x : y;
+  element.css("transform","scale("+min+")");
+  toggleTransformHierarchy(to);
+}
+
+function getpoint(event,ignoreparent){
   parentpos = $(event.currentTarget).offset();
   var X = event.pageX, Y=event.pageY;
   if(X===undefined){//work with touches too
     X = event.originalEvent.touches[0].pageX;
     Y = event.originalEvent.touches[0].pageY;
   }
+  if(ignoreparent)
+    return [X,Y];
   return [(X-parentpos.left),(Y-parentpos.top)];
+}
+
+function convertFile(source){
+  var files = source.files;
+  var file = files[0];
+  var target = "#"+$(source).data("target");
+  if (files && file) {
+    var reader = new FileReader();
+    reader.onload = function(readerEvt) {
+      $(target).val(readerEvt.target.result);
+      $(source).parent("form").get(0).submit();
+    };
+    reader.readAsDataURL(file);
+  }
+  return false;
 }
 
 function getActiveCanvasLayer(){
@@ -29,15 +76,50 @@ function wrapimgurl(s){
   return s;
 }
 
-function setbackground(data){
-  console.log("setbackground");
-  console.log(data);
-  if(!data){
-    //this is invoked by the form
-    data = {bg:wrapimgurl($("#setbackgroundbg").val())}
-    socket.emit('set background',data);
+function setbackgroundcropping(){
+  //see if it's cropped at all
+  var selector = $("#cropselector");
+  var img = $("#uncroppedbg");
+  var data = {background:wrapimgurl(img.attr("src"))+" no-repeat"};
+  if(selector.size()){
+    var target = $("#whiteboard-container");
+    var xscale = (target.width() / selector.width());
+    var yscale = (target.height() / selector.height());
+    /*
+    if($("#fillmax").is(":checked")){
+      if(xscale > yscale)
+        xscale = yscale;
+      if(yscale > xscale)
+        yscale = xscale;
+    }
+    */
+    var initpos = selector.css("background-position").split(' ');
+    var left = xscale*parseFloat(initpos[0]);
+    var top = yscale*parseFloat(initpos[1]);
+    data['background-size'] = img.width()*xscale+"px "+img.height()*yscale+"px";
+    data['background-position'] = left+"px "+top+"px";
+    data['background-repeat'] = 'no-repeat';
   }
-  $("#whiteboard-container").css({background:data.bg+" no-repeat",'background-size':'100% 100%'});
+  $("#bgimagecrop").dialog("close");
+  setbackground(data,true);
+}
+
+function setbackground(data,emit){
+  if(!data){
+    //this is invoked by the side form
+    emit = true;
+    var s = $("#setbackgroundbg").val();
+    if(testimgurl(s)){
+      //crop it first
+      $("#uncroppedbg").attr("src",s);
+      $("#bgimagecrop").dialog("open");
+      return false;
+    }
+    data = {background:wrapimgurl($("#setbackgroundbg").val())}
+  }
+  $("#whiteboard-container").css(data);
+  if(emit)
+    socket.emit('set background',data);
 }
 
 function clearcan(layer,emit){
@@ -49,10 +131,9 @@ function clearcan(layer,emit){
 }
 
 function placemarker(markerdata){
-  console.log("placemarker");
-  console.log(markerdata);
   if(!markerdata)
     return;
+  var marker = 
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
     //.data(markerdata)
     .toggleClass("circle",markerdata.circle)
@@ -60,18 +141,47 @@ function placemarker(markerdata){
     .append($("<div class=markerbody></div>")
       .css({ background:markerdata.bg+" no-repeat center top", 'background-size':'cover'}))
     //.text(markerdata.label)
-    .append("<div class='markerbase'><span>"+markerdata.label+"</span></div>")
+    .append("<div class='markerbase'></div>")
     .appendTo("#whiteboard-container")
-    .resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); } })
-    .draggable({stack:'.marker', stop:function(){ sendmarkerupdate($(this)); } })
-    .on('mousedown',function(event){ event.stopPropagation(); })
-    .show("scale");
-  setTimeout(function(){ updatemarker(markerdata);},500);
+    .on('mousedown',function(event){ 
+      event.stopPropagation(); 
+      if(event.ctrlKey)
+        $(this).draggable("option","helper","clone");
+     })
+     .on("dblclick",function(event){
+        var label = $(this).find(".markerlabel");
+        if(label.width() < 50) label.width(50);
+        if(label.height() < 20) label.height(20); 
+        $("<input type='text' style='position:absolute;width:100%;height:100%';>")
+        .val(label.text())
+        .appendTo(label).offset(label.offset()).focus().select()
+        .on('change',function(event,ui){
+          var marker = $(this).parents(".marker");
+          label.text($(this).val());
+          sendmarkerupdate(marker);
+          scaletofit(label);
+        });
+     })
+     ;
+  var label = $("<div class='markerlabel'>"+markerdata.label+"</div>");
+  if(markerdata.bg.substr(0,3)=="url" || markerdata.threed){
+    label.appendTo(marker.find(".markerbase").css("min-height","1.1em"));
+  }
+  else
+    label.appendTo(marker.find(".markerbody"));
+  marker.resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); },
+                    resize:function(event,ui){ scaletofit($(this).find(".markerlabel")); }
+                  })
+        .draggable({stack:'.marker', stop:function(event,ui){ sendmarkerupdate($(this),event,ui); } })
+    
+  setTimeout(function(){ updatemarker(markerdata); marker.show("scale",function(){scaletofit(label);});},200);
 }
 
 function updatemarker(markerdata,marker){
   marker = marker || $("#"+markerdata.id);
   marker.data("_TT_marker",markerdata);
+  marker.find(".markerlabel").text(markerdata.label);
+  //note todo: should remove min-height from non-3d labels if null
   var update = {};
   if(markerdata.position){
     update.left = markerdata.position.left;
@@ -81,15 +191,9 @@ function updatemarker(markerdata,marker){
     update.width = markerdata.width;
   if(markerdata.height)
     update.height = markerdata.height;
-    
-  if(!$.isEmptyObject(update)){
-    marker.animate({
-      top:markerdata.position.top,
-      left:markerdata.position.left,
-      width:markerdata.width,
-      height:markerdata.height
-    });
-  } 
+  if(!$.isEmptyObject(update) || markerdata.label){
+    marker.animate(update,function(){ scaletofit(marker.find(".markerlabel")); });
+  }
 }
 
 function addmarker(){
@@ -100,8 +204,6 @@ function addmarker(){
   var threed = $("#addmarker3d").is(":checked");
   var isimg = testimgurl(bg);
   var markerdata = {bg:wrapimgurl(bg), label:label, circle:circle, threed:threed};
-  console.log("addmarker");
-  console.log(markerdata);
   if(isimg){
     $("<img>",{
       src:bg,
@@ -132,22 +234,34 @@ function addpath(data){
   }
 }
 
-function sendmarkerupdate(marker){
+function sendmarkerupdate(marker,event,ui){
   var data = marker.data("_TT_marker");
-  data.width = marker.width();
-  data.height = marker.height();
-  data.position = marker.position();
-  
-  //don't send the whole object...
-  var reply = {
-    id:data.id,
-    width:data.width,
-    height:data.height,
-    position:data.position
-    //add other potential updates here
+  if(marker.draggable("option","helper")=="clone"){
+    //actually clone instead of update
+    marker.draggable("option","helper","original");
+    var datacopy={};
+    $.extend(datacopy,data);
+    delete datacopy['id'];
+    datacopy.position = ui.position;
+    socket.emit('add marker',datacopy);
   }
+  else{
+    data.width = marker.width();
+    data.height = marker.height();
+    data.position = marker.position();
+    data.label = marker.find(".markerlabel").text();
+    //don't send the whole object...
+    var reply = {
+      id:data.id,
+      width:data.width,
+      height:data.height,
+      position:data.position,
+      label:data.label
+      //add other potential updates here
+    }
   
-  socket.emit('update marker',reply);
+    socket.emit('update marker',reply);
+  }
 }
 
 
@@ -160,6 +274,78 @@ function removemarker(id,emit){
 
 $(function(){
   //ui functionality
+  $("#releasenotes").dialog({
+    autoOpen:false,
+    show:"fold",
+    hide:"fade",
+    draggable:false,
+    resizable:false,
+    width:600
+  });
+  $("#bgimagecrop").dialog({
+    autoOpen:false,
+    show: "fold",
+    hide: "puff",
+    draggable:false,
+    resizable:false,
+    width:700,
+    height:500,
+    open: function(){
+      $("#cropselector").remove();
+      $("#uncroppedbg").css("opacity",1);
+      //$("#uncroppedbg").on("click",function(event){
+        //$("#cropselector").remove();
+        //$(this).css("opacity",1);
+      //});
+      $("#cropdiv").on("mousedown touchstart",function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        var img = $("#uncroppedbg");
+        $("#cropselector").remove();
+        img.css("opacity",0.3);
+        var start = getpoint(event,true);
+        var bgpos = getpoint(event);
+        var selector = $("<div id='cropselector'></div>")
+          .css({'background-image':wrapimgurl(img.attr("src")),
+                'background-size':img.width()+"px "+img.height()+"px",
+                'background-position':(-bgpos[0])+"px "+(-bgpos[1])+"px",
+                'background-repeat':'no-repeat',
+                'background-origin':'border-box',
+                'width':1,
+                'height':1
+              })
+          .appendTo("#cropdiv")
+          .offset({left:start[0], top:start[1]});
+        $("#cropdiv").on("mousemove touchmove",function(moveevent){
+          var mousept = getpoint(moveevent,true);
+          var newwidth = mousept[0]-start[0], newheight=mousept[1]-start[1];
+          var newoffset = {left:start[0], top:start[1]};
+          var newbgpos = [bgpos[0],bgpos[1]];
+          if(mousept[0]<start[0]){
+            newoffset.left = mousept[0];
+            newbgpos[0] = getpoint(moveevent)[0];
+          }
+          if(mousept[1]<start[1]){
+            newoffset.top = mousept[1];
+            newbgpos[1] = getpoint(moveevent)[1];
+          }
+          selector.offset(newoffset);
+          selector.css('background-position',(-newbgpos[0])+"px "+(-newbgpos[1])+"px");
+          selector.width(Math.abs(newwidth)).height(Math.abs(newheight));
+          //selector.width(event.offsetX-selector.offset().left).height(event.offsetY-selector.offset().top);
+        });
+        $("#cropdiv").on("touchend mouseup",function(endevent){
+          $(this).off("mousemove touchmove touchend mouseup");
+          endevent.preventDefault();
+          endevent.stopPropagation();
+          if(selector.width() < 10 || selector.height()<10){
+            selector.remove();
+            img.css("opacity",1);
+          }
+        });
+      });
+    }
+  });
   $("#whiteboard").get(0).getContext('2d').strokeStyle='red';
   $("#whiteboard").get(0).getContext('2d').lineWidth=2;
   $("#whiteboard_bg").get(0).getContext('2d').strokeStyle='black';
@@ -194,10 +380,10 @@ $(function(){
        ctx.stroke();
        points.push(pt);
     });
-    $(this).on('mouseup mouseout touchend',function(event){
+    $(this).on('mouseup mouseleave touchend',function(event){
       event.preventDefault();
       event.stopPropagation();
-      $(this).off('mousemove touchmove mouseout mouseup touchend');
+      $(this).off('mousemove touchmove mouseleave mouseup touchend');
       $(this).css({cursor:"auto"});
       socket.emit('add path',{
         layer: layer,
