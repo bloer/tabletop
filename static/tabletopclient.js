@@ -126,6 +126,7 @@ function setbackground(data,emit){
   $("#whiteboard-container").css(data);
   if(emit)
     socket.emit('set background',data);
+  return false;
 }
 
 function clearcan(layer,emit){
