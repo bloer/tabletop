@@ -171,7 +171,7 @@ function placemarker(markerdata){
      })
      ;
   var label = $("<div class='markerlabel'>"+markerdata.label+"</div>");
-  if(markerdata.bg.substr(0,3)=="url" || markerdata.threed){
+  if((markerdata.bg && markerdata.bg.substr(0,3)=="url") || markerdata.threed){
     label.appendTo(marker.find(".markerbase").css("min-height","1.1em"));
   }
   else
