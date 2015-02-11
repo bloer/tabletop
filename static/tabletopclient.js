@@ -1,5 +1,6 @@
 var socket = io();
 var graphicsLock=false;
+var gamestate = {};
 
 function centerme(element,to){
   element.css("position","absolute");
@@ -396,12 +397,13 @@ $(function(){
   
   
   socket.on('sync state',function(data){
+    gamestate = data;
     //clear everything first
     //should do this more automatically
     clearcan(0);
     clearcan(1);
     $(".marker").remove();
-    data.markers.forEach(placemarker);
+    $.each(data.markers,function(key,val){placemarker(val);});
     data.paths.forEach(addpath);
     if(data.background)
       setbackground(data.background);

@@ -69,13 +69,12 @@ var tabletop_server = function() {
     self.setupEventHandlers = function(){
       self.prefix = "_TT";
       self.markerprefix = self.prefix+"_MARKER";
-      
-      
+      self.getIndex = function(id){ return id.substr(self.markerprefix.length); }
+      self.getId = function(index){ return self.markerprefix+index; }
+            
       self.gamestate = {
         marker_counter: 0,
-        getIndex: function(id){ return id.substr(self.markerprefix.length); },
-        getId: function(index){ return self.markerprefix+index; },
-        markers: [],
+        markers: {},
         paths: [],
         background: {}
       };
@@ -85,21 +84,28 @@ var tabletop_server = function() {
         io.sockets.emit('message',"New connection opened from "+socket.conn.remoteAddress);
         socket.emit('sync state',gstate);
         
-        socket.on('disconnect',function() {
+        socket.on('disconnect',function(){
           io.sockets.emit('message',"User at "+socket.conn.remoteAddress+" disconnected");
         });
-        
+        //resynchronize completely
+        socket.on('sync state',function(data){
+          if(data){
+            gstate = data;
+            io.sockets.emit('sync state',gstate);
+          }
+          else
+            socket.emit('sync state',gstate);
+        });
         //handle markers
         socket.on('add marker',function(data){
           var newmarker = data;
-          newmarker.id = gstate.getId(gstate.marker_counter);
-          gstate.markers[gstate.marker_counter++] = newmarker;
+          newmarker.id = self.getId(gstate.marker_counter++);
+          gstate.markers[newmarker.id] = newmarker;
           io.sockets.emit('add marker',newmarker);
         });
         socket.on('update marker',function(data){
           //get the index from the id
-          var index = gstate.getIndex(data.id);
-          var old = gstate.markers[index];
+          var old = gstate.markers[data.id];
           if(!old){
             console.log("Received update request for missing marker!");
             return;
@@ -109,8 +115,7 @@ var tabletop_server = function() {
           socket.broadcast.emit('update marker',data);
         });
         socket.on('remove marker',function(data){
-          var index = gstate.getIndex(data.id);
-          delete gstate.markers[index];
+          delete gstate.markers[data.id];
           socket.broadcast.emit('remove marker',data);
         });
         
