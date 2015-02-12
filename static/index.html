@@ -42,10 +42,11 @@
     #whiteboard-container {width:1050px; height:100%; float:left; border:1px solid blue; z-index:-1}
     #sideboard {width:145px; height:100%; float:right}
     #sideboard input[type='text'],label {width:120px}
-    #whiteboard_bg { z-index:0 }
-    #whiteboard {z-index:1}
+    #whiteboard_bg { z-index:1 }
+    #whiteboard {z-index:2}
+    #whiteboard_mask {z-index:0}
     div.circle {border-radius:50%}
-    .marker {width:50px; height:50px;position:absolute; z-index:3; text-align:center; border:0px solid blue;cursor:move;}
+    .marker {width:50px; height:50px;position:absolute; z-index:5; text-align:center; border:0px solid blue;cursor:move;}
     
     .marker img {width:inherit; border:1px solid black }
     .marker.threed {/*-webkit-transform:rotate3d(1,1,0,45deg); transform:rotate3d(1,1,0,45deg);*/
@@ -62,7 +63,7 @@
       background-image:url("Trash_Can-128.png"); background-size:cover}
     #messages {width:850px; height:150px; overflow:scroll; clear:both;}
     #bgimagecrop {background-color:gray}
-    #uncroppedbg {width:100%;}
+    #uncroppedbg {max-width:100%;max-height:80%}
     #cropselector {border:2px solid black; position:absolute;}
     .notransform { -webkit-transform:none !important; transform:none !important; }
     #releasenotes {display:none}
@@ -75,9 +76,10 @@
     <div id="whiteboard-container">
       <canvas id="whiteboard_bg" width="1050" height="700"></canvas>
       <canvas id="whiteboard" width="1050" height="700"></canvas>
+      <canvas id="whiteboard_mask" width="1050" height="700"></canvas>
     </div>
     <div id="sideboard">
-      <a href="javascript:$('#releasenotes').dialog('open');">New features!</a>
+      <a href="javascript:void(0)" onclick="return showreleasenotes();">New features!</a>
       <div id="bgcontrols">
         <h3>Background</h3>
         <form id="setbackground" action="javascript:void(0)" onsubmit="javascript:setbackground();">
@@ -87,6 +89,7 @@
           <input type="file" id="setbackgroundfile" accept="image/*" data-target="setbackgroundbg" onchange="convertFile(this)">
           <button>Set background</button>
         </form>
+        <button onclick="clearmaskzone_interactive()">Clear mask zone</button>
       </div>
       <hr>
       <div id="drawcontrols">
@@ -130,6 +133,8 @@
       <br>
       -->
       Crop the background image if you want, then hit <button>OK</button> <br>
+      <input type="checkbox" value="applymask" checked="true" name="applymask" id="applymask">
+      <label for="applymask">Apply mask?</label><br>
       <div id="cropdiv">
         <img id="uncroppedbg" />
       </div>

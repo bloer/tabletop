@@ -2,6 +2,12 @@ var socket = io();
 var graphicsLock=false;
 var gamestate = {};
 
+function showreleasenotes()
+{
+  $("#releasenotes").dialog("open");
+  return false;
+}
+
 function centerme(element,to){
   element.css("position","absolute");
   to = to || element.parent();
@@ -77,11 +83,70 @@ function wrapimgurl(s){
   return s;
 }
 
+function clearmaskzone_interactive(){
+  var oldz = $("#whiteboard_mask").css("z-index");
+  $("#whiteboard_mask").animate({"opacity":0.5,"z-index":4})
+    .on("mousedown touchstart",function(event,ui){
+      event.preventDefault();
+      event.stopPropagation();
+      var mask = $(this);
+      var container = $("#whiteboard-container");
+      var start = getpoint(event,true);
+      var selector = $("<div id='clearmaskselector'></div>")
+        .css({
+            border:"3px dashed blue",
+            position:"absolulte",
+            'z-index':5,
+            width:1,
+            height:1
+          })
+        .appendTo(container)
+        .offset({left:start[0],top:start[1]})
+        ;
+      container.on("touchmove mousemove",function(event,ui){
+        event.preventDefault();
+        event.stopPropagation();
+        var mousept = getpoint(event,true);
+        var newwidth = mousept[0]-start[0], newheight=mousept[1]-start[1];
+        var newoffset = {left:start[0], top:start[1]};
+        if(mousept[0]<start[0]){
+            newoffset.left = mousept[0];
+          }
+          if(mousept[1]<start[1]){
+            newoffset.top = mousept[1];
+          }
+          selector.offset(newoffset);
+          selector.width(Math.abs(newwidth)).height(Math.abs(newheight));
+      });
+      container.on("mouseup touchend",function(event,ui){
+        event.preventDefault();
+        event.stopPropagation();
+        var x = selector.offset().left - mask.offset().left;
+        var y = selector.offset().top - mask.offset().top;
+        var w = selector.width();
+        var h = selector.height();
+        socket.emit('clearmaskzone',{'x':x,'y':y,'w':w,'h':h});
+        selector.remove();
+        mask.off("mousedown touchstart")
+          .animate({"opacity":1,"z-index":oldz});
+        container.off("mousemove touchmove mouseup touchend");
+      });
+  });
+}
+
+function clearmaskzone(data){
+  $("#whiteboard_mask").get(0).getContext('2d')
+    .clearRect(data.x, data.y, data.w, data.h);
+}
+
 function setbackgroundcropping(){
   //see if it's cropped at all
   var selector = $("#cropselector");
   var img = $("#uncroppedbg");
-  var data = {background:wrapimgurl(img.attr("src"))+" no-repeat"};
+  var data = {background:wrapimgurl(img.attr("src"))+" no-repeat",
+              'background-size':"100% 100%"};
+  var applymask = $("#applymask").is(":checked");
+  data['_applymask'] = applymask;
   if(selector.size()){
     var target = $("#whiteboard-container");
     var xscale = (target.width() / selector.width());
@@ -119,6 +184,18 @@ function setbackground(data,emit){
     data = {background:wrapimgurl($("#setbackgroundbg").val())}
   }
   $("#whiteboard-container").css(data);
+  var mask = $("#whiteboard_mask");
+  var ctx = mask.get(0).getContext('2d');
+  if(data['_applymask']){
+    ctx.fillStyle = "#f3f3f3";
+    ctx.fillRect(0,0,mask.width(),mask.height());
+  }
+  else{
+    ctx.clearRect(0,0,mask.width(),mask.height());
+  }
+  if(data['_clearmaskzones']){
+    data['_clearmaskzones'].forEach(clearmaskzone);
+  }
   if(emit)
     socket.emit('set background',data);
   return false;
@@ -166,7 +243,7 @@ function placemarker(markerdata){
      })
      ;
   var label = $("<div class='markerlabel'>"+markerdata.label+"</div>");
-  if(markerdata.bg.substr(0,3)=="url" || markerdata.threed){
+  if((markerdata.bg && markerdata.bg.substr(0,3)=="url") || markerdata.threed){
     label.appendTo(marker.find(".markerbase").css("min-height","1.1em"));
   }
   else
@@ -359,9 +436,7 @@ $(function(){
     } 
   });
   $("#whiteboard-container").on('mousedown touchstart',function(event){
-    if($(event.target).hasClass("marker") || 
-       $(event.target).hasClass("markerbody") || 
-       $(event.target).hasClass("markerbase") )
+    if(!$(event.target).is("canvas")) 
       return;
     graphicsLock = true;
     event.preventDefault();
@@ -417,6 +492,7 @@ $(function(){
   socket.on('clear canvas',function(data){ clearcan(data.layer); });
   
   socket.on('set background',setbackground);
+  socket.on('clearmaskzone',clearmaskzone);
   
   socket.on('message',function(msg){ $("#messages").append("<br>"+msg); });
   

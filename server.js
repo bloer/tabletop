@@ -136,7 +136,12 @@ var tabletop_server = function() {
           gstate.background = data;
           socket.broadcast.emit('set background',data);
         });
-        
+        socket.on('clearmaskzone',function(data){
+          if(!gstate.background['_clearmaskzones'])
+            gstate.background['_clearmaskzones'] = [];
+          gstate.background['_clearmaskzones'].push(data);
+          io.sockets.emit('clearmaskzone',data);
+        });
       });
     };
 
