@@ -75,8 +75,8 @@ var tabletop_server = function() {
       self.gamestate = {
         marker_counter: 0,
         markers: {},
-        paths: [],
-        background: {}
+        background: {},
+        layers: {'default': {paths:[], visible: true} }
       };
       
       io.on('connection', function (socket) {
@@ -119,17 +119,50 @@ var tabletop_server = function() {
           socket.broadcast.emit('remove marker',data);
         });
         
+        function addlayer(data){
+          var layername = data.layer;
+          if(!gstate.layers[layername]){
+            gstate.layers[layername] = {visible: true, paths:[]};
+            socket.broadcast.emit('add layer',{layer:layername, visible: true});
+          }
+          return gstate.layers[layername]
+        }
+        
+        //handle layer addition and removal
+        socket.on('add layer',addlayer);
+        
+        socket.on('show layer',function(data){
+          layer = gstate.layers[data.layer];
+          if(layer){
+            layer.visible = data.visible;
+            socket.broadcast.emit('show layer',data);
+          }
+        });
+        
+        socket.on('clear layer',function(data){
+          layer = gstate.layers[data.layer];
+          if(layer){
+            layer.paths = [];
+            socket.broadcast.emit('clear layer',data);
+          }
+        });
+        
+        socket.on('delete layer',function(data){
+          delete gstate.layers[data.layer];
+          socket.broadcast.emit('delete layer',data);
+        });
+        
         //handle canvas draw events
         socket.on('add path',function(data){
-          gstate.paths.push(data);
+          var layer = gstate.layers[data.layer];
+          if(!layer){
+            //this shouldn't really happen, but...
+            layer = addlayer({layer:data.layer})
+          }
+          layer.paths.push(data.path);
           socket.broadcast.emit('add path',data);
         });
-        socket.on('clear canvas',function(data){
-          gstate.paths = gstate.paths.filter(function(path){
-            return path.layer!=data.layer;
-          });
-          socket.broadcast.emit('clear canvas',data);
-        });
+        
         
         //handle background
         socket.on('set background',function(data){
