@@ -272,6 +272,8 @@ function updatemarker(markerdata,marker){
     update.left = markerdata.position.left;
     update.top = markerdata.position.top;
   }
+  else
+    centerme(marker);
   if(markerdata.width)
     update.width = markerdata.width;
   if(markerdata.height)
