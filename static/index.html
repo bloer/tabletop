@@ -65,6 +65,9 @@
     #cropselector {border:2px solid black; position:absolute;}
     .notransform { -webkit-transform:none !important; transform:none !important; }
     #releasenotes {display:none}
+    .layercontrol.active {background-color:#aaffff}
+    .layercontrol td:not(first-child) { text-align:center} 
+    table {border-collapse: collapse;}
   </style>
 </head>
 
@@ -90,9 +93,12 @@
       <hr>
       <div id="drawcontrols">
         <h3>Whiteboard</h3>
+        <label for="drawcolor">Draw Color: </label>
+        <input type="color" id="drawcolor" value="#ff0000">
+        
         <table id="layercontrols">
           <thead>
-            <tr><th>Layer</th><th>Show?</th><th>Erase</th><th>Delete</th></tr>
+            <tr><th>Layer</th><th>Show</th><th>Erase</th><th>Delete</th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -100,13 +106,7 @@
           <input type="text" id="newlayername"> 
           <button>Add Layer</button>
         </form>
-        <br>
-        <label for="drawto">Draw To:</label>
-        <select id="drawto" name="drawto">
-        </select>
-        <br>
-        <label for="drawcolor">Color:</label>
-        <input type="color" id="drawcolor" value="#ff0000">
+        
       </div>
       <hr>
       <div id="markercontrols">

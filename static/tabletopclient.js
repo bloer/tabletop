@@ -66,7 +66,7 @@ function convertFile(source){
 }
 
 function getActiveCanvasLayer(){
-  return $("#drawto").val();
+  return $("#layercontrols .layercontrol.active").data("layer");
 }
 
 function testimgurl(s){
@@ -80,7 +80,8 @@ function wrapimgurl(s){
 }
 
 function clearmaskzone_interactive(){
-  
+  if(!gamestate.background._applymask)
+    return false;
   $("#whiteboard").animate({"opacity":0.5})
     .on("mousedown touchstart",function(event,ui){
       event.preventDefault();
@@ -121,10 +122,11 @@ function clearmaskzone_interactive(){
         var y = selector.offset().top - mask.offset().top;
         var w = selector.width();
         var h = selector.height();
-        socket.emit('clearmaskzone',{'x':x,'y':y,'w':w,'h':h});
+        zone = {'x':x,'y':y,'w':w,'h':h};
+        socket.emit('clearmaskzone',zone);
         selector.remove();
         mask.off("mousedown touchstart")
-          .animate({"opacity":1,"z-index":oldz});
+          .animate({"opacity":1});
         container.off("mousemove touchmove mouseup touchend");
       });
   });
@@ -366,9 +368,14 @@ function addlayer(data, emit){
   var layername = data.layer;
   if(!gamestate.layers[layername])
     gamestate.layers[layername] = {visible: data.visible, paths:[]};
-  var row = $("<tr class='layercontrol'></tr>").data('layername',layername)
+  var row = $("<tr class='layercontrol'></tr>").data('layer',layername)
     .attr("id","layercontrol-"+layername)
-    .append('<td>'+layername+'</td>')
+    .append($('<td>'+layername+'</td>').click(function(){
+          $("#layercontrols .layercontrol").removeClass("active");
+          $(this).parent().addClass("active");
+        })
+        .css("cursor","pointer")
+      )
     .append($('<td></td>')
         .append($("<input class='layertoggle' type='checkbox' id='showlayer-"+layername+"'>")
           .prop("checked",data.visible)
@@ -382,9 +389,11 @@ function addlayer(data, emit){
         .append($("<button>Delete</button>").click(function(){ deletelayer({layer:layername},true); }))
       )
     .appendTo("#layercontrols tbody");
-  $("#drawto").append("<option value='"+layername+"'>"+layername+"</option>");
-  if(updateselect)
-    $("#drawto").val(layername);
+  if(layername=="default"){
+    row.find("td:last-child button").remove();
+  }
+  if(updateselect || !getActiveCanvasLayer())
+    row.children("td:first-child").click();
   if(emit)
     socket.emit('add layer',data);
 }
@@ -394,6 +403,8 @@ function deletelayer(data,emit){
   delete gamestate.layers[data.layer];
   $("#layercontrol-"+data.layer).remove();
   $("#drawto [value='"+data.layer+"']").remove();
+  if(!getActiveCanvasLayer())
+  $("#layercontrol-default td:first-child").click();
   if(emit)
     socket.emit('delete layer',data);
 }
@@ -554,6 +565,12 @@ $(function(){
   socket.on('delete layer',deletelayer);
   
   socket.on('set background',setbackground);
+  socket.on('clearmaskzone',function(data){
+    if(!gamestate.background._clearmaskzones)
+      gamestate.background._clearmaskzones = [];
+    gamestate.background._clearmaskzones.push(data);
+    refreshwhiteboard();
+  });
   
   socket.on('message',function(msg){ $("#messages").append("<br>"+msg); });
   
