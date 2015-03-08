@@ -423,6 +423,36 @@ function removemarker(id,emit){
     socket.emit('remove marker',{id:id});
 }
 
+function savegame(){
+  var nameinput = $("#savename");
+  var name = $.trim(nameinput.val());
+  if(!name){
+    alert("You must provide a name for your saved game");
+    return false;
+  }
+  socket.emit('save game',{name:name,overwrite:$("#saveoverwrite").is(":checked")});
+}
+
+function loadgame(){
+  console.log("getting list of save games...");
+  socket.emit('list saves',0,function(err,docs){
+    console.log(docs.length+" saved games retrieved");
+    var tbody = $("#gameslist tbody");
+    tbody.children("tr").remove();
+    docs.forEach(function(doc){
+      $("<tr class='savedgame'></tr>")
+        .append("<td>"+doc.name+"</td>")
+        .append("<td>"+(new Date(doc.time).toLocaleString())+"</td>")
+        .click(function(){
+          socket.emit('load game',doc);
+          $("#chooseloadgame").dialog("close");
+        })
+        .appendTo(tbody);
+    });
+    $("#chooseloadgame").dialog("open");
+  });
+}
+
 $(function(){
   //ui functionality
   $("#whiteboard").get(0).getContext('2d').lineWidth=2;
@@ -435,6 +465,16 @@ $(function(){
     resizable:false,
     width:600
   });
+  
+  $("#chooseloadgame").dialog({
+    autoOpen: false,
+    show:"fold",
+    hide:"fade",
+    draggable: true,
+    resizable: true,
+    width:600
+  });
+  
   $("#bgimagecrop").dialog({
     autoOpen:false,
     show: "fold",

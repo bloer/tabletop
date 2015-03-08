@@ -4,6 +4,7 @@ var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
+var mongojs = require('mongojs');
 
 /**
  *  Define the sample application.
@@ -25,6 +26,7 @@ var tabletop_server = function() {
         //  Set the environment variables we need.
         self.ipaddress = process.env.OPENSHIFT_NODEJS_IP;
         self.port      = process.env.OPENSHIFT_NODEJS_PORT || 8080;
+        self.dburl     = process.env.OPENSHIFT_MONGODB_DB_URL || "localhost/tabletop";
 
         if (typeof self.ipaddress === "undefined") {
             //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
@@ -72,7 +74,7 @@ var tabletop_server = function() {
       self.getIndex = function(id){ return id.substr(self.markerprefix.length); }
       self.getId = function(index){ return self.markerprefix+index; }
             
-      self.gamestate = {
+      gstate = {
         marker_counter: 0,
         markers: {},
         background: {},
@@ -80,7 +82,6 @@ var tabletop_server = function() {
       };
       
       io.on('connection', function (socket) {
-        var gstate = self.gamestate;
         io.sockets.emit('message',"New connection opened from "+socket.conn.remoteAddress);
         socket.emit('sync state',gstate);
         
@@ -175,6 +176,46 @@ var tabletop_server = function() {
           gstate.background['_clearmaskzones'].push(data);
           io.sockets.emit('clearmaskzone',data);
         });
+        
+        //handle save,load games
+        socket.on('save game',function(data){
+          if(data.overwrite){
+            self.savegames.remove({'name':data.name})
+          }
+          self.savegames.insert({'name':data.name, 'gamestate':gstate},
+            function(err,doc){
+              if(err)
+                socket.emit('message',"An error occurred during savegame: "+err);
+              else
+                socket.emit('message',"Game "+data.name+" successfully saved.");
+            });
+        });
+        
+        socket.on('load game',function(data){
+          console.log('trying to load game '+data._id);
+          var id = mongojs.ObjectId(data._id);
+          console.log(id);
+          self.savegames.findOne({_id:id},function(err,doc){
+            if(err)
+              console.log('database error loading savegame',err);
+            else{
+              gstate = doc.gamestate;
+              io.sockets.emit('sync state',gstate);
+            }
+          });
+        });
+        
+        socket.on('list saves',function(data,callback){
+          self.savegames.find({},{_id:1,name:1}).sort({name:1,_id:-1},function(err,docs){
+            if(!err){
+              docs.forEach(function(doc){
+                doc.time = doc._id.getTimestamp();
+              });
+            }
+            callback(err,docs); 
+          });
+        });
+        
       });
     };
 
@@ -191,6 +232,11 @@ var tabletop_server = function() {
         self.setupEventHandlers();
         // Create the express server and routes.
         app.use(express.static(__dirname + '/static'));
+        // Connect to the database
+        self.db = mongojs(self.dburl,['savegames']);
+        self.db.on('error',function(err){ console.log('database error',err); });
+        self.savegames = self.db.collection('savegames');
+        self.savegames.ensureIndex({'name':1});
     };
 
 
