@@ -200,11 +200,13 @@ function setbackground(data,emit){
     }
     data = {background:wrapimgurl($("#setbackgroundbg").val())}
   }
-  gamestate.background = data;
-  refreshwhiteboard();
-  $("#whiteboard-container").css(data);
   if(emit)
     socket.emit('set background',data);
+  else{
+    gamestate.background = data;
+    refreshwhiteboard();
+    $("#whiteboard-container").css(data);
+  }
   return false;
 }
 

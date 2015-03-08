@@ -206,8 +206,14 @@ var tabletop_server = function() {
         
         //handle background
         socket.on('set background',function(data){
-          gstate.background = data;
-          socket.broadcast.emit('set background',data);
+          if(!uploadimage(data.background,function(newurl){
+            data.background = "url('"+newurl+"')";
+            gstate.background = data;
+            io.sockets.emit('set background', data);
+          })){
+            gstate.background = data;
+            io.sockets.emit('set background',data);
+          }
         });
         socket.on('clearmaskzone',function(data){
           if(!gstate.background['_clearmaskzones'])
