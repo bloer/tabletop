@@ -68,6 +68,10 @@
     .layercontrol.active {background-color:#aaffff}
     .layercontrol td:not(first-child) { text-align:center} 
     table {border-collapse: collapse;}
+    #chooseloadgame { text-align:center }
+    #gameslist {margin:auto}
+    #gameslist td,th {padding-left:20px; padding-right:20px; border-bottom:1px solid white}
+    .savedgame {cursor:pointer}
   </style>
 </head>
 
@@ -126,7 +130,17 @@
         </form>
         <div id="trashcan"></div>
       </div>
-           
+      <hr>
+      <div id="savecontrols">
+        <label for="savename">Save name:</label>
+        <input type="text" id="savename">
+        <input type="checkbox" id="saveoverwrite" checked="true">
+        <label for="saveoverwrite">Overwrite?</label>
+        <button onclick="savegame()">Save game</button>
+        <br>
+        <button onclick="loadgame()">Load game</button>
+      </div>
+      
     </div>
   <div id="messages"></div>
   </div>
@@ -148,7 +162,18 @@
     </form>
   </div>
   
+  <div id="chooseloadgame">
+    <table id="gameslist">
+      <thead>
+        <tr><th>Name</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+  
   <div id="releasenotes">
+    <h4>New features in version 0.5</h4>
     <h4>New features in version 0.3</h4>
     <ul>
       <li>Hold down ctrl key and drag to clone a marker</li>
