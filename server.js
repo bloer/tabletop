@@ -4,6 +4,10 @@ var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
+var mongojs = require('mongojs');
+var crypto = require('crypto');
+var parseDataUri = require('parse-data-uri');
+var package = require('./package.json');
 
 /**
  *  Define the sample application.
@@ -25,6 +29,7 @@ var tabletop_server = function() {
         //  Set the environment variables we need.
         self.ipaddress = process.env.OPENSHIFT_NODEJS_IP;
         self.port      = process.env.OPENSHIFT_NODEJS_PORT || 8080;
+        self.dburl     = process.env.OPENSHIFT_MONGODB_DB_URL || "localhost/tabletop";
 
         if (typeof self.ipaddress === "undefined") {
             //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
@@ -72,15 +77,14 @@ var tabletop_server = function() {
       self.getIndex = function(id){ return id.substr(self.markerprefix.length); }
       self.getId = function(index){ return self.markerprefix+index; }
             
-      self.gamestate = {
+      gstate = {
         marker_counter: 0,
         markers: {},
-        paths: [],
-        background: {}
+        background: {},
+        layers: {'default': {paths:[], visible: true} }
       };
       
       io.on('connection', function (socket) {
-        var gstate = self.gamestate;
         io.sockets.emit('message',"New connection opened from "+socket.conn.remoteAddress);
         socket.emit('sync state',gstate);
         
@@ -96,13 +100,49 @@ var tabletop_server = function() {
           else
             socket.emit('sync state',gstate);
         });
+        
+        //transform data uri to stored image
+        function uploadimage(data, callback){
+          var datauri = data;
+          if(data.substr(0,4) == "url(")
+            datauri = data.substring(5,data.length-2);
+          if(datauri.substr(0,5) == "data:"){
+            var parsedURI = parseDataUri(datauri);
+            var md5sum = crypto.createHash('md5');
+            md5sum.update(parsedURI.data);
+            parsedURI.hash = md5sum.digest('base64');
+            self.images.update({hash:parsedURI.hash},parsedURI,{upsert:true,multi:false},
+              function(err,doc){
+                if(err)
+                  socket.emit('message',"Error uploading image: "+err);
+                else{
+                  self.images.findOne({hash:parsedURI.hash},{_id:1},function(err,doc){
+                    callback("/images/"+doc._id);
+                  });
+                }
+              }
+            );
+            return true;
+          }
+          //this is not a data uri
+          return false;
+        }
+        
         //handle markers
         socket.on('add marker',function(data){
           var newmarker = data;
           newmarker.id = self.getId(gstate.marker_counter++);
-          gstate.markers[newmarker.id] = newmarker;
-          io.sockets.emit('add marker',newmarker);
+          //test to see if it's a data uri
+          if(!uploadimage(newmarker.bg,function(newurl){
+            newmarker.bg = "url('"+newurl+"')";
+            gstate.markers[newmarker.id] = newmarker;
+            io.sockets.emit('add marker',newmarker);
+          }) ){
+            gstate.markers[newmarker.id] = newmarker;
+            io.sockets.emit('add marker',newmarker);
+          }
         });
+        
         socket.on('update marker',function(data){
           //get the index from the id
           var old = gstate.markers[data.id];
@@ -119,22 +159,61 @@ var tabletop_server = function() {
           socket.broadcast.emit('remove marker',data);
         });
         
+        function addlayer(data){
+          var layername = data.layer;
+          if(!gstate.layers[layername]){
+            gstate.layers[layername] = {visible: true, paths:[]};
+            socket.broadcast.emit('add layer',{layer:layername, visible: true});
+          }
+          return gstate.layers[layername]
+        }
+        
+        //handle layer addition and removal
+        socket.on('add layer',addlayer);
+        
+        socket.on('show layer',function(data){
+          layer = gstate.layers[data.layer];
+          if(layer){
+            layer.visible = data.visible;
+            socket.broadcast.emit('show layer',data);
+          }
+        });
+        
+        socket.on('clear layer',function(data){
+          layer = gstate.layers[data.layer];
+          if(layer){
+            layer.paths = [];
+            socket.broadcast.emit('clear layer',data);
+          }
+        });
+        
+        socket.on('delete layer',function(data){
+          delete gstate.layers[data.layer];
+          socket.broadcast.emit('delete layer',data);
+        });
+        
         //handle canvas draw events
         socket.on('add path',function(data){
-          gstate.paths.push(data);
+          var layer = gstate.layers[data.layer];
+          if(!layer){
+            //this shouldn't really happen, but...
+            layer = addlayer({layer:data.layer})
+          }
+          layer.paths.push(data.path);
           socket.broadcast.emit('add path',data);
         });
-        socket.on('clear canvas',function(data){
-          gstate.paths = gstate.paths.filter(function(path){
-            return path.layer!=data.layer;
-          });
-          socket.broadcast.emit('clear canvas',data);
-        });
+        
         
         //handle background
         socket.on('set background',function(data){
-          gstate.background = data;
-          socket.broadcast.emit('set background',data);
+          if(!uploadimage(data.background,function(newurl){
+            data.background = "url('"+newurl+"')";
+            gstate.background = data;
+            io.sockets.emit('set background', data);
+          })){
+            gstate.background = data;
+            io.sockets.emit('set background',data);
+          }
         });
         socket.on('clearmaskzone',function(data){
           if(!gstate.background['_clearmaskzones'])
@@ -142,6 +221,44 @@ var tabletop_server = function() {
           gstate.background['_clearmaskzones'].push(data);
           io.sockets.emit('clearmaskzone',data);
         });
+        
+        //handle save,load games
+        socket.on('save game',function(data){
+          if(data.overwrite){
+            self.savegames.remove({'name':data.name})
+          }
+          self.savegames.insert({'name':data.name, ttversion: package.version, 'gamestate':gstate},
+            function(err,doc){
+              if(err)
+                socket.emit('message',"An error occurred during savegame: "+err);
+              else
+                socket.emit('message',"Game "+data.name+" successfully saved.");
+            });
+        });
+        
+        socket.on('load game',function(data){
+          var id = mongojs.ObjectId(data._id);
+          self.savegames.findOne({_id:id},function(err,doc){
+            if(err)
+              console.log('database error loading savegame',err);
+            else{
+              gstate = doc.gamestate;
+              io.sockets.emit('sync state',gstate);
+            }
+          });
+        });
+        
+        socket.on('list saves',function(data,callback){
+          self.savegames.find({},{_id:1,name:1}).sort({name:1,_id:-1},function(err,docs){
+            if(!err){
+              docs.forEach(function(doc){
+                doc.time = doc._id.getTimestamp();
+              });
+            }
+            callback(err,docs); 
+          });
+        });
+        
       });
     };
 
@@ -158,6 +275,24 @@ var tabletop_server = function() {
         self.setupEventHandlers();
         // Create the express server and routes.
         app.use(express.static(__dirname + '/static'));
+        app.get('/images/:_id',function(req,res){
+          //find the image in the database
+          self.images.findOne({_id:mongojs.ObjectId(req.params._id)},function(err,doc){
+            if(err)
+              res.status(404).send("Can't find image width id "+_id);
+            else{
+              res.set('Content-Type',doc.mimeType)
+              res.send(doc.data.buffer);
+            }
+          });
+        });
+        // Connect to the database
+        self.db = mongojs(self.dburl,['savegames','images']);
+        self.db.on('error',function(err){ console.log('database error',err); });
+        self.savegames = self.db.collection('savegames');
+        self.savegames.ensureIndex({'name':1});
+        self.images = self.db.collection('images');
+        self.images.ensureIndex({'hash':1},{unique:true});
     };
 
 
@@ -167,8 +302,8 @@ var tabletop_server = function() {
     self.start = function() {
         //  Start the app on the specific interface (and port).
         server.listen(self.port, self.ipaddress, function() {
-            console.log('%s: Node server started on %s:%d ...',
-                        Date(Date.now() ), self.ipaddress, self.port);
+            console.log('%s: %s v%s server started on %s:%d ...',
+                        Date(Date.now() ), package.name, package.version, self.ipaddress, self.port);
         });
     };
 
