@@ -5,6 +5,7 @@ var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 var mongojs = require('mongojs');
+var package = require('./package.json');
 
 /**
  *  Define the sample application.
@@ -182,7 +183,7 @@ var tabletop_server = function() {
           if(data.overwrite){
             self.savegames.remove({'name':data.name})
           }
-          self.savegames.insert({'name':data.name, 'gamestate':gstate},
+          self.savegames.insert({'name':data.name, ttversion: package.version, 'gamestate':gstate},
             function(err,doc){
               if(err)
                 socket.emit('message',"An error occurred during savegame: "+err);
@@ -192,9 +193,7 @@ var tabletop_server = function() {
         });
         
         socket.on('load game',function(data){
-          console.log('trying to load game '+data._id);
           var id = mongojs.ObjectId(data._id);
-          console.log(id);
           self.savegames.findOne({_id:id},function(err,doc){
             if(err)
               console.log('database error loading savegame',err);
@@ -246,8 +245,8 @@ var tabletop_server = function() {
     self.start = function() {
         //  Start the app on the specific interface (and port).
         server.listen(self.port, self.ipaddress, function() {
-            console.log('%s: Node server started on %s:%d ...',
-                        Date(Date.now() ), self.ipaddress, self.port);
+            console.log('%s: %s v%s server started on %s:%d ...',
+                        Date(Date.now() ), package.name, package.version, self.ipaddress, self.port);
         });
     };
 
