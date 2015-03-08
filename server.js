@@ -5,6 +5,8 @@ var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 var mongojs = require('mongojs');
+var crypto = require('crypto');
+var parseDataUri = require('parse-data-uri');
 var package = require('./package.json');
 
 /**
@@ -98,13 +100,49 @@ var tabletop_server = function() {
           else
             socket.emit('sync state',gstate);
         });
+        
+        //transform data uri to stored image
+        function uploadimage(data, callback){
+          var datauri = data;
+          if(data.substr(0,4) == "url(")
+            datauri = data.substring(5,data.length-2);
+          if(datauri.substr(0,5) == "data:"){
+            var parsedURI = parseDataUri(datauri);
+            var md5sum = crypto.createHash('md5');
+            md5sum.update(parsedURI.data);
+            parsedURI.hash = md5sum.digest('base64');
+            self.images.update({hash:parsedURI.hash},parsedURI,{upsert:true,multi:false},
+              function(err,doc){
+                if(err)
+                  socket.emit('message',"Error uploading image: "+err);
+                else{
+                  self.images.findOne({hash:parsedURI.hash},{_id:1},function(err,doc){
+                    callback("/images/"+doc._id);
+                  });
+                }
+              }
+            );
+            return true;
+          }
+          //this is not a data uri
+          return false;
+        }
+        
         //handle markers
         socket.on('add marker',function(data){
           var newmarker = data;
           newmarker.id = self.getId(gstate.marker_counter++);
-          gstate.markers[newmarker.id] = newmarker;
-          io.sockets.emit('add marker',newmarker);
+          //test to see if it's a data uri
+          if(!uploadimage(newmarker.bg,function(newurl){
+            newmarker.bg = "url('"+newurl+"')";
+            gstate.markers[newmarker.id] = newmarker;
+            io.sockets.emit('add marker',newmarker);
+          }) ){
+            gstate.markers[newmarker.id] = newmarker;
+            io.sockets.emit('add marker',newmarker);
+          }
         });
+        
         socket.on('update marker',function(data){
           //get the index from the id
           var old = gstate.markers[data.id];
@@ -231,11 +269,24 @@ var tabletop_server = function() {
         self.setupEventHandlers();
         // Create the express server and routes.
         app.use(express.static(__dirname + '/static'));
+        app.get('/images/:_id',function(req,res){
+          //find the image in the database
+          self.images.findOne({_id:mongojs.ObjectId(req.params._id)},function(err,doc){
+            if(err)
+              res.status(404).send("Can't find image width id "+_id);
+            else{
+              res.set('Content-Type',doc.mimeType)
+              res.send(doc.data.buffer);
+            }
+          });
+        });
         // Connect to the database
-        self.db = mongojs(self.dburl,['savegames']);
+        self.db = mongojs(self.dburl,['savegames','images']);
         self.db.on('error',function(err){ console.log('database error',err); });
         self.savegames = self.db.collection('savegames');
         self.savegames.ensureIndex({'name':1});
+        self.images = self.db.collection('images');
+        self.images.ensureIndex({'hash':1},{unique:true});
     };
 
 

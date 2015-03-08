@@ -585,6 +585,7 @@ $(function(){
     gamestate = data;
     //refreshwhiteboard(); <-gets called automatically
     $(".marker").remove();
+    $(".layercontrol").remove();
     $.each(data.markers,function(key,val){placemarker(val);});
     $.each(data.layers,function(key,val){addlayer({layer:key,visible:val.visible}); });
     if(data.background)
