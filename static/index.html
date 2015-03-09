@@ -26,7 +26,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 
 <head>
-	<title>Virtual Tabletop 0.5.0</title>
+	<title>Virtual Tabletop 0.5.1</title>
 	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
 	<meta name="generator" content="Geany 0.21" />
   <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
@@ -57,7 +57,7 @@
     .marker.threed .markerbase {-webkit-transform:skewX(-45deg);transform:skewX(-45deg);position:relative; left:-10px;top:0px; border-style:solid; bprder-color:black; border-width:1px 3px 3px 1px; background-color:white; min-height:1.1em}
     .markerlabel {/*font-size:100px;*/ padding:0; position:absolute; text-align:center; transform-origin:center; white-space:nowrap; }
     /*canvas {position:absolute} */
-    #trashcan{ width:100px; height:100px;  
+    #trashcan{ width:60px; height:60px;  
       background-image:url("Trash_Can-128.png"); background-size:cover}
     #messages {width:850px; height:150px; overflow:scroll; clear:both;}
     #bgimagecrop {background-color:gray}
@@ -70,49 +70,25 @@
     table {border-collapse: collapse;}
     #chooseloadgame { text-align:center }
     #gameslist {margin:auto}
-    #gameslist td,th {padding-left:20px; padding-right:20px; border-bottom:1px solid white}
+    #gameslist th,#gameslist td {padding-left:20px; padding-right:20px; border-bottom:1px solid white}
     .savedgame {cursor:pointer}
-  </style>
+    #sideboard h3 {margin-top:2px; margin-bottom: 2px; padding-top:0; padding-bottom:0,
+                    font-size:smaller; font-weight:bold; text-decoration:underline}
+    #sideboard h3::before {content:"-- "}
+    #sideboard h3::after {content:" --"}
+</style>
 </head>
 
 <body>
-	<h1>Virtual Tabletop 0.5.0</h1>
+	<h1>Virtual Tabletop 0.5.1</h1>
   <div id="main">
     <div id="whiteboard-container">
       <canvas id="whiteboard" width="1050" height="700"></canvas>
     </div>
     <div id="sideboard">
+      <!--
       <a href="javascript:void(0)" onclick="return showreleasenotes();">New features!</a>
-      <div id="bgcontrols">
-        <h3>Background</h3>
-        <form id="setbackground" action="javascript:void(0)" onsubmit="javascript:setbackground();">
-          <label for="setbackgroundbg">URL or color</label>
-          <input type="text" id="setbackgroundbg"><br>
-          <label for="setbackgroundfile">or file</label>
-          <input type="file" id="setbackgroundfile" accept="image/*" data-target="setbackgroundbg" onchange="convertFile(this)">
-          <button>Set background</button>
-        </form>
-        <button onclick="clearmaskzone_interactive()">Clear mask zone</button>
-      </div>
-      <hr>
-      <div id="drawcontrols">
-        <h3>Whiteboard</h3>
-        <label for="drawcolor">Draw Color: </label>
-        <input type="color" id="drawcolor" value="#ff0000">
-        
-        <table id="layercontrols">
-          <thead>
-            <tr><th>Layer</th><th>Show</th><th>Erase</th><th>Delete</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <form id="addlayer" action="javascript:void(0)" onsubmit="javascript:addlayer();">
-          <input type="text" id="newlayername"> 
-          <button>Add Layer</button>
-        </form>
-        
-      </div>
-      <hr>
+      -->
       <div id="markercontrols">
         <h3>Markers</h3>
         <form id="addmarker" action="javascript:addmarker();">
@@ -130,14 +106,48 @@
         </form>
         <div id="trashcan"></div>
       </div>
-      <hr>
+      
+      
+      <div id="drawcontrols">
+        <h3>Whiteboard</h3>
+        <label for="drawcolor">Draw Color: </label>
+        <input type="color" id="drawcolor" value="#ff0000">
+        
+        <table id="layercontrols">
+          <thead>
+            <tr><th>Layer</th><th>Show</th><th>Erase</th><th>Delete</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <form id="addlayer" action="javascript:void(0)" onsubmit="javascript:addlayer();">
+          <input type="text" id="newlayername"> 
+          <button>Add Layer</button>
+        </form>
+        
+      </div>
+     
+      <div id="bgcontrols">
+        <h3>Background</h3>
+        <form id="setbackground" action="javascript:void(0)" onsubmit="javascript:setbackground();">
+          <label for="setbackgroundbg">URL or color</label>
+          <input type="text" id="setbackgroundbg"><br>
+          <label for="setbackgroundfile">or file</label>
+          <input type="file" id="setbackgroundfile" accept="image/*" data-target="setbackgroundbg" onchange="convertFile(this)">
+          <button>Set background</button>
+        </form>
+        <button onclick="clearmaskzone_interactive()">Clear mask zone</button>
+      </div>
+     
       <div id="savecontrols">
-        <label for="savename">Save name:</label>
-        <input type="text" id="savename">
-        <input type="checkbox" id="saveoverwrite" checked="true">
-        <label for="saveoverwrite">Overwrite?</label>
-        <button onclick="savegame()">Save game</button>
-        <br>
+        <h3>Save/Load</h3>
+        <form id="saveform" action="javascript:void(0);" onsubmit="javascript:savegame();">
+          <label for="savename">Save name:</label>
+          <input type="text" id="savename">
+          <input type="checkbox" id="saveoverwrite" checked="true">
+          <label for="saveoverwrite">Overwrite?</label>
+          <button>Save game</button>
+        </form>
+        
         <button onclick="loadgame()">Load game</button>
       </div>
       
