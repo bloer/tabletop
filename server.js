@@ -203,7 +203,18 @@ var tabletop_server = function() {
           socket.broadcast.emit('add path',data);
         });
         
-        
+        socket.on('pan layer',function(data){
+          var layer = gstate.layers[data.layer];
+          if(layer){
+            layer.paths.forEach(function(path){
+              path.points.forEach(function(pt){
+                pt[0] += data.offset[0];
+                pt[1] += data.offset[1];
+              });
+            });
+            socket.broadcast.emit('pan layer',data);
+          }
+        });
         //handle background
         socket.on('set background',function(data){
           if(!uploadimage(data.background,function(newurl){
