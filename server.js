@@ -327,7 +327,7 @@ var tabletop_server = function() {
      */
     self.start = function() {
         //  Start the app on the specific interface (and port).
-        server.listen(self.port, self.ipaddress, function() {
+        server.listen(self.port, /*self.ipaddress,*/ function() {
             console.log('%s: %s v%s server started on %s:%d ...',
                         Date(Date.now() ), package.name, package.version, self.ipaddress, self.port);
         });
