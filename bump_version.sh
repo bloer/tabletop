@@ -17,3 +17,6 @@ for file in $FILELIST ; do
     chmod --reference=${file} ${file}.tmp
     mv ${file}.tmp $file
 done
+
+git add .
+git commit -m "bump version to $NEWVERSION"
