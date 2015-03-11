@@ -432,6 +432,10 @@ function savegame(){
     alert("You must provide a name for your saved game");
     return false;
   }
+  //flash the input to show that it was accepted
+  var c = nameinput.css("background-color");
+  nameinput.css("background-color","#00ff00");
+  setTimeout(function(){ nameinput.css("background-color",c); },300);
   socket.emit('save game',{name:name,overwrite:$("#saveoverwrite").is(":checked")});
 }
 
