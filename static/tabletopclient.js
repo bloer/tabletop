@@ -678,8 +678,9 @@ $(function(){
   $("#whiteboard").on("wheel",function(event){ 
     event.preventDefault();
     event.stopPropagation();
+    var pos = event.originalEvent.wheelDelta ? event.originalEvent.wheelDelta>0 : event.originalEvent.deltaY<0;
     socket.emit("zoom layer",{layer:getActiveCanvasLayer(),
-                              factor: event.originalEvent.wheelDelta > 0 ? 1.5 : 1/1.5,
+                              factor: pos ? 1.5 : 1/1.5,
                               center: [$("#whiteboard").get(0).width/2,$("#whiteboard").get(0).height/2]
                             }); });
   
