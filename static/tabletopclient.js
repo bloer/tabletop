@@ -459,7 +459,7 @@ function loadgame(){
   });
 }
 
-function activatedrawing(elem){
+function activatedrawing(elem,event){
   //elem should be the whiteboard-container
   graphicsLock = true;
   $(elem).css({cursor:"crosshair"});
@@ -540,7 +540,7 @@ function zoomlayer(layer,factor,center){
   refreshwhiteboard();
 }
 
-function activatepanning(elem){
+function activatepanning(elem,event){
   //elem should be whiteboard-container
   $(elem).css({cursor:"move"});
   var layer = getActiveCanvasLayer();
@@ -667,9 +667,9 @@ $(function(){
     event.stopPropagation();
     var touches = event.originalEvent.touches;
     if(event.which ==1 || (touches && touches.length==1))
-      activatedrawing(this);
+      activatedrawing(this,event);
     else if(event.which == 2 || (touches && touches.length==2) || event.altKey)
-      activatepanning(this);
+      activatepanning(this,event);
     else{
       return false;
     }
