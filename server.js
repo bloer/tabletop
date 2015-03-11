@@ -35,7 +35,7 @@ var tabletop_server = function() {
             //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
             //  allows us to run/test the app locally.
             console.warn('No OPENSHIFT_NODEJS_IP var, using 127.0.0.1');
-            self.ipaddress = "127.0.0.1";
+            //self.ipaddress = "127.0.0.1";
         };
     };
 
@@ -327,7 +327,7 @@ var tabletop_server = function() {
      */
     self.start = function() {
         //  Start the app on the specific interface (and port).
-        server.listen(self.port, /*self.ipaddress,*/ function() {
+        server.listen(self.port, self.ipaddress, function() {
             console.log('%s: %s v%s server started on %s:%d ...',
                         Date(Date.now() ), package.name, package.version, self.ipaddress, self.port);
         });
