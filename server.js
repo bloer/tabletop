@@ -215,6 +215,21 @@ var tabletop_server = function() {
             socket.broadcast.emit('pan layer',data);
           }
         });
+        
+        socket.on('zoom layer',function(data){
+          var layer = gstate.layers[data.layer];
+          if(layer){
+            layer.paths.forEach(function(path){
+              path.points.forEach(function(pt){
+                var shifted = [pt[0]-data.center[0],pt[1]-data.center[1]];
+                pt[0] = data.center[0] + shifted[0]*data.factor;
+                pt[1] = data.center[1] + shifted[1]*data.factor;
+              });
+            });
+            io.sockets.emit('zoom layer',data);
+          }
+        });
+        
         //handle background
         socket.on('set background',function(data){
           if(!uploadimage(data.background,function(newurl){

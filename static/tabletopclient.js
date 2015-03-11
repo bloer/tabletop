@@ -526,6 +526,20 @@ function animatepanlayer(layer,offset,timestamp,sofar){
   }
 }
 
+function zoomlayer(layer,factor,center){
+  //always zoom from/to the center of the figure
+  var whiteboard = $("#whiteboard").get(0);
+  center = center || [whiteboard.width/2,whiteboard.height/2];
+  gamestate.layers[layer].paths.forEach(function(path){
+    path.points.forEach(function(pt){
+      var shifted = addTo(pt,center,1);
+      pt[0] = center[0] + shifted[0]*factor;
+      pt[1] = center[1] + shifted[1]*factor;
+    });
+  });
+  refreshwhiteboard();
+}
+
 function activatepanning(elem){
   //elem should be whiteboard-container
   $(elem).css({cursor:"move"});
@@ -661,7 +675,13 @@ $(function(){
     }
     return true;
   });
-  
+  $("#whiteboard").on("wheel",function(event){ 
+    event.preventDefault();
+    event.stopPropagation();
+    socket.emit("zoom layer",{layer:getActiveCanvasLayer(),
+                              factor: event.originalEvent.wheelDelta > 0 ? 1.5 : 1/1.5,
+                              center: [$("#whiteboard").get(0).width/2,$("#whiteboard").get(0).height/2]
+                            }); });
   
   socket.on('sync state',function(data){
     gamestate = data;
@@ -695,8 +715,8 @@ $(function(){
     refreshwhiteboard();
   });
   
-  socket.on('pan layer',function(data){ animatepanlayer(data.layer,data.offset); });
-  
+  socket.on('pan layer',function(data){ panlayer(data.layer,data.offset); });
+  socket.on('zoom layer',function(data){ zoomlayer(data.layer,data.factor,data.center); })
   socket.on('message',function(msg){ $("#messages").append("<br>"+msg); });
   
 });
