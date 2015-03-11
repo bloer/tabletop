@@ -203,6 +203,32 @@ var tabletop_server = function() {
           socket.broadcast.emit('add path',data);
         });
         
+        socket.on('pan layer',function(data){
+          var layer = gstate.layers[data.layer];
+          if(layer){
+            layer.paths.forEach(function(path){
+              path.points.forEach(function(pt){
+                pt[0] += data.offset[0];
+                pt[1] += data.offset[1];
+              });
+            });
+            socket.broadcast.emit('pan layer',data);
+          }
+        });
+        
+        socket.on('zoom layer',function(data){
+          var layer = gstate.layers[data.layer];
+          if(layer){
+            layer.paths.forEach(function(path){
+              path.points.forEach(function(pt){
+                var shifted = [pt[0]-data.center[0],pt[1]-data.center[1]];
+                pt[0] = data.center[0] + shifted[0]*data.factor;
+                pt[1] = data.center[1] + shifted[1]*data.factor;
+              });
+            });
+            io.sockets.emit('zoom layer',data);
+          }
+        });
         
         //handle background
         socket.on('set background',function(data){

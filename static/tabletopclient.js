@@ -459,6 +459,115 @@ function loadgame(){
   });
 }
 
+function activatedrawing(elem){
+  //elem should be the whiteboard-container
+  graphicsLock = true;
+  $(elem).css({cursor:"crosshair"});
+  var layer = getActiveCanvasLayer();
+  var color = $("#drawcolor").val();
+  var ctx = $("#whiteboard").get(0).getContext('2d');
+  var pt = getpoint(event);
+  ctx.beginPath();
+  ctx.strokeStyle=color;
+  ctx.moveTo(pt[0],pt[1]);
+  var points = [pt];
+  $(elem).on('mousemove touchmove',function(event){
+    event.preventDefault();
+    event.stopPropagation();
+     pt = getpoint(event);
+     ctx.lineTo(pt[0],pt[1]);
+     ctx.stroke();
+     points.push(pt);
+  });
+  $(elem).on('mouseup mouseleave touchend',function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    $(this).off('mousemove touchmove mouseleave mouseup touchend');
+    $(this).css({cursor:"auto"});
+    var path = {points:points, color:color};
+    gamestate.layers[layer].paths.push(path);
+    socket.emit('add path',{layer:layer, path:path});
+    graphicsLock = false;
+  });
+}
+
+function addTo(a, b, subtract, inplace){
+  var c = inplace ? a : [];
+  for(var i=0; i<a.length; ++i){
+    c[i] = subtract ? a[i] - b[i] : a[i] + b[i];
+  }
+  return c;
+}
+
+function panlayer(layer,offset){
+  var paths = gamestate.layers[layer].paths;
+  paths.forEach(function(path){
+    var points = path.points;
+    points.forEach(function(pt){ addTo(pt,offset,0,1); });
+  });
+  refreshwhiteboard();
+}
+
+function animatepanlayer(layer,offset,timestamp,sofar){
+  if(!timestamp){
+    requestAnimationFrame(function(t){ animatepanlayer(layer,offset,t,[t,0,0]); });
+  }
+  else{
+    var duration = 300;
+    var frac = (timestamp - sofar[0])/duration;
+    if(frac>1) frac=1;
+    var step = addTo([offset[0]*frac,offset[1]*frac],sofar.slice(1),1);
+    panlayer(layer,step);
+    sofar[1] += step[0];
+    sofar[2] += step[1];
+    if(frac<1)
+      requestAnimationFrame(function(t){ animatepanlayer(layer,offset,t,sofar.slice(0));
+        });
+  }
+}
+
+function zoomlayer(layer,factor,center){
+  //always zoom from/to the center of the figure
+  var whiteboard = $("#whiteboard").get(0);
+  center = center || [whiteboard.width/2,whiteboard.height/2];
+  gamestate.layers[layer].paths.forEach(function(path){
+    path.points.forEach(function(pt){
+      var shifted = addTo(pt,center,1);
+      pt[0] = center[0] + shifted[0]*factor;
+      pt[1] = center[1] + shifted[1]*factor;
+    });
+  });
+  refreshwhiteboard();
+}
+
+function activatepanning(elem){
+  //elem should be whiteboard-container
+  $(elem).css({cursor:"move"});
+  var layer = getActiveCanvasLayer();
+  var startpt = getpoint(event);
+  var totaloffset=[0,0];
+  var lastpt = startpt;
+  $(elem).on('mousemove touchmove',function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    var pt = getpoint(event);
+    var offset = addTo(pt,lastpt,true);
+    panlayer(layer,offset);
+    lastpt = pt;
+  });
+  $(elem).on('mouseup mouseleave touchend',function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    $(this).off('mousemove touchmove mouseleave mouseup touchend');
+    $(this).css({cursor:"auto"});
+    var pt = getpoint(event);
+    var offset = addTo(pt,lastpt,true);
+    totaloffset = addTo(pt,startpt,true);
+    panlayer(layer,offset);
+    socket.emit('pan layer',{layer:layer,offset:totaloffset});
+  });
+}
+
 $(function(){
   //ui functionality
   $("#whiteboard").get(0).getContext('2d').lineWidth=2;
@@ -553,39 +662,26 @@ $(function(){
   });
   $("#whiteboard-container").on('mousedown touchstart',function(event){
     if(!$(event.target).is("canvas")) 
-      return;
-    graphicsLock = true;
+      return false;
     event.preventDefault();
     event.stopPropagation();
-    $(this).css({cursor:"crosshair"});
-    var layer = getActiveCanvasLayer();
-    var color = $("#drawcolor").val();
-    var ctx = $("#whiteboard").get(0).getContext('2d');
-    var pt = getpoint(event);
-    ctx.beginPath();
-    ctx.strokeStyle=color;
-    ctx.moveTo(pt[0],pt[1]);
-    var points = [pt];
-    $(this).on('mousemove touchmove',function(event){
-      event.preventDefault();
-      event.stopPropagation();
-       pt = getpoint(event);
-       ctx.lineTo(pt[0],pt[1]);
-       ctx.stroke();
-       points.push(pt);
-    });
-    $(this).on('mouseup mouseleave touchend',function(event){
-      event.preventDefault();
-      event.stopPropagation();
-      $(this).off('mousemove touchmove mouseleave mouseup touchend');
-      $(this).css({cursor:"auto"});
-      var path = {points:points, color:color};
-      gamestate.layers[layer].paths.push(path);
-      socket.emit('add path',{layer:layer, path:path});
-      graphicsLock = false;
-    });
+    var touches = event.originalEvent.touches;
+    if(event.which ==1 || (touches && touches.length==1))
+      activatedrawing(this);
+    else if(event.which == 2 || (touches && touches.length==2) || event.altKey)
+      activatepanning(this);
+    else{
+      return false;
+    }
+    return true;
   });
-  
+  $("#whiteboard").on("wheel",function(event){ 
+    event.preventDefault();
+    event.stopPropagation();
+    socket.emit("zoom layer",{layer:getActiveCanvasLayer(),
+                              factor: event.originalEvent.wheelDelta > 0 ? 1.5 : 1/1.5,
+                              center: [$("#whiteboard").get(0).width/2,$("#whiteboard").get(0).height/2]
+                            }); });
   
   socket.on('sync state',function(data){
     gamestate = data;
@@ -619,6 +715,8 @@ $(function(){
     refreshwhiteboard();
   });
   
+  socket.on('pan layer',function(data){ panlayer(data.layer,data.offset); });
+  socket.on('zoom layer',function(data){ zoomlayer(data.layer,data.factor,data.center); })
   socket.on('message',function(msg){ $("#messages").append("<br>"+msg); });
   
 });
