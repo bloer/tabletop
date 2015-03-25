@@ -666,10 +666,10 @@ $(function(){
     event.preventDefault();
     event.stopPropagation();
     var touches = event.originalEvent.touches;
-    if(event.which ==1 || (touches && touches.length==1))
-      activatedrawing(this,event);
-    else if(event.which == 2 || (touches && touches.length==2) || event.altKey)
+    if(event.which == 2 || (touches && touches.length==2) || event.ctrlKey)
       activatepanning(this,event);
+    else if(event.which ==1 || (touches && touches.length==1))
+      activatedrawing(this,event);
     else{
       return false;
     }
