@@ -181,6 +181,29 @@ function refreshwhiteboard()
   else{
     ctx.clearRect(0,0,W,H);
   }
+  if(gamestate.grid && gamestate.grid.show){
+    var oldwidth = ctx.strokeWidth;
+    ctx.strokeWidth = 1;
+    ctx.strokeStyle="#CCC";
+    var pitch = parseInt(gamestate.grid.pitch);
+    var x = pitch;
+    while(x < W){
+      ctx.beginPath();
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,H);
+      ctx.stroke();
+      x += pitch;
+    }
+    var y = pitch;
+    while(y<H){
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(W,y);
+      ctx.stroke();
+      y += pitch;
+    }
+    ctx.strokeWidth = oldwidth;
+  }
   $.each(gamestate.layers,function(index,layer){
     if(layer.visible)
       layer.paths.forEach(drawpath);
@@ -568,9 +591,30 @@ function activatepanning(elem,event){
   });
 }
 
+function drawgrid(data,emit){
+  console.log(data);
+  data = data || {show:false};
+  data.pitch = data.pitch || $("#gridpitch").val();
+  
+  if(!gamestate.grid || gamestate.grid.show != data.show || gamestate.grid.pitch != data.pitch){
+    gamestate.grid = data;
+    refreshwhiteboard();
+  }
+  if(emit)
+    socket.emit("set grid",data);
+  else{
+    $("#showgrid").prop("checked",data.show).button("refresh");
+    $("#gridpitch").val(data.pitch);
+  }
+  
+}
+
 $(function(){
   //ui functionality
   $("#whiteboard").get(0).getContext('2d').lineWidth=2;
+  
+  $("[type=checkbox],button").button();
+  //$("[type=range]").slider();
   
   $("#releasenotes").dialog({
     autoOpen:false,
@@ -684,6 +728,17 @@ $(function(){
                               center: [$("#whiteboard").get(0).width/2,$("#whiteboard").get(0).height/2]
                             }); });
   
+  $("#showgrid").change(function(){
+    drawgrid({show:$(this).is(":checked"), pitch:$("#gridpitch").val()}, true);
+  });
+  
+  $("#gridpitch").on("input",function(){
+    drawgrid({show:$("#showgrid").is(":checked"),pitch:$(this).val()}, false);
+  })
+  .change(function(){
+    drawgrid({show:$("#showgrid").is(":checked"),pitch:$(this).val()}, true);
+  });
+  
   socket.on('sync state',function(data){
     gamestate = data;
     //refreshwhiteboard(); <-gets called automatically
@@ -693,6 +748,7 @@ $(function(){
     $.each(data.layers,function(key,val){addlayer({layer:key,visible:val.visible}); });
     if(data.background)
       setbackground(data.background);
+    drawgrid(data.grid);
   });
   
   socket.on('add marker', placemarker);
@@ -719,5 +775,6 @@ $(function(){
   socket.on('pan layer',function(data){ panlayer(data.layer,data.offset); });
   socket.on('zoom layer',function(data){ zoomlayer(data.layer,data.factor,data.center); })
   socket.on('message',function(msg){ $("#messages").append("<br>"+msg); });
+  socket.on('set grid',drawgrid);
   
 });

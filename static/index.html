@@ -35,7 +35,7 @@
   <script src="jquery.ui.touch-punch.min.js"></script>
   <script src="tabletopclient.js"></script>
   
-  <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.11.2/themes/mint-choc/jquery-ui.css">
+  <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.11.2/themes/redmond/jquery-ui.css">
   
   <style>
     #main {width:1200px; height:700px}
@@ -76,6 +76,9 @@
                     font-size:smaller; font-weight:bold; text-decoration:underline}
     #sideboard h3::before {content:"-- "}
     #sideboard h3::after {content:" --"}
+    
+    #gridpitch { max-width:100% }
+    .ui-button {font-size:smaller}
 </style>
 </head>
 
@@ -128,6 +131,8 @@
      
       <div id="bgcontrols">
         <h3>Background</h3>
+        <input type="checkbox" id="showgrid" > <label for="showgrid">Draw grid</label>
+        <input type="range" min=5 max=350 step=5 id="gridpitch" value=50>
         <form id="setbackground" action="javascript:void(0)" onsubmit="javascript:setbackground();">
           <label for="setbackgroundbg">URL or color</label>
           <input type="text" id="setbackgroundbg"><br>

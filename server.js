@@ -231,6 +231,11 @@ var tabletop_server = function() {
         });
         
         //handle background
+        socket.on('set grid',function(data){
+          gstate.grid = data;
+          socket.broadcast.emit('set grid',data);
+        });
+        
         socket.on('set background',function(data){
           if(!uploadimage(data.background,function(newurl){
             data.background = "url('"+newurl+"')";
