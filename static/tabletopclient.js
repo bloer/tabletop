@@ -182,8 +182,8 @@ function refreshwhiteboard()
     ctx.clearRect(0,0,W,H);
   }
   if(gamestate.grid && gamestate.grid.show){
-    var oldwidth = ctx.strokeWidth;
-    ctx.strokeWidth = 1;
+    var oldwidth = ctx.lineWidth;
+    ctx.lineWidth = 1;
     ctx.strokeStyle="#CCC";
     var pitch = parseInt(gamestate.grid.pitch);
     var x = pitch;
@@ -202,7 +202,7 @@ function refreshwhiteboard()
       ctx.stroke();
       y += pitch;
     }
-    ctx.strokeWidth = oldwidth;
+    ctx.lineWidth = oldwidth;
   }
   $.each(gamestate.layers,function(index,layer){
     if(layer.visible)
