@@ -26,7 +26,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 
 <head>
-	<title>Virtual Tabletop 0.7.0</title>
+	<title>Virtual Tabletop 0.8.0</title>
 	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
 	<meta name="generator" content="Geany 0.21" />
   <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
@@ -38,10 +38,12 @@
   <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.11.2/themes/redmond/jquery-ui.css">
   
   <style>
-    #main {width:1200px; height:700px}
+    #main {width:1400px; height:700px}
     #whiteboard-container {/*width:1050px;*/ height:100%; float:left; border:1px solid blue; z-index:-1}
-    #sideboard {width:145px; height:100%; float:right}
-    #sideboard input[type='text'],label {width:120px}
+    #sideboard {width:345px; height:100%; float:right}
+    #sideboard input[type='text'] {width:125px}
+    #sideboard label {width: 100px; }
+    #sideboard .buttonset label {width:80px;  }
     #whiteboard {z-index:0}
     div.circle {border-radius:50%}
     .marker {width:50px; height:50px;position:absolute; z-index:5; text-align:center; border:0px solid blue;cursor:move;}
@@ -54,11 +56,11 @@
         background-repeat:no-repeat; background-size:cover; border-radius:inherit}
     .markerbase { background-color:none; width:inherit; border:0px solid black;
          text-align:center;vertical-align:middle}
-    .marker.threed .markerbase {-webkit-transform:skewX(-45deg);transform:skewX(-45deg);position:relative; left:-10px;top:0px; border-style:solid; bprder-color:black; border-width:1px 3px 3px 1px; background-color:white; min-height:1.1em}
+    .marker.threed .markerbase {-webkit-transform:skewX(-45deg);transform:skewX(-45deg);position:relative; left:-10px;top:0px; border-style:solid; border-color:black; border-width:1px 3px 3px 1px; background-color:white; min-height:1.1em}
     .markerlabel {/*font-size:100px;*/ padding:0; position:absolute; text-align:center; transform-origin:center; white-space:nowrap; }
     /*canvas {position:absolute} */
     #trashcan{ width:60px; height:60px;  
-      background-image:url("Trash_Can-128.png"); background-size:cover}
+      /*background-image:url("Trash_Can-128.png"); background-size:cover*/}
     #messages {width:850px; height:150px; overflow:scroll; clear:both;}
     #bgimagecrop {background-color:gray}
     #uncroppedbg {max-width:100%;max-height:80%}
@@ -72,47 +74,32 @@
     #gameslist {margin:auto}
     #gameslist th,#gameslist td {padding-left:20px; padding-right:20px; border-bottom:1px solid white}
     .savedgame {cursor:pointer}
+    /*
     #sideboard h3 {margin-top:2px; margin-bottom: 2px; padding-top:0; padding-bottom:0,
                     font-size:smaller; font-weight:bold; text-decoration:underline}
     #sideboard h3::before {content:"-- "}
     #sideboard h3::after {content:" --"}
-    
-    #gridpitch { max-width:100% }
-    .ui-button {font-size:smaller}
+    */
+    #gridpitch { width:240px }
+    .buttonset .ui-button-text {font-size:smaller; padding:5px}
+    .ui-accordion .ui-accordion-content { padding:1em 0.6em }
+    input[type=file] {width: 250px }
 </style>
 </head>
 
 <body>
-	<h1>Virtual Tabletop 0.7.0</h1>
+	<h1>Virtual Tabletop 0.8.0</h1>
   <div id="main">
     <div id="whiteboard-container">
       <canvas id="whiteboard" width="1050" height="700"></canvas>
     </div>
     <div id="sideboard">
+      <div id="sideboard_accordion">
       <!--
       <a href="javascript:void(0)" onclick="return showreleasenotes();">New features!</a>
       -->
-      <div id="markercontrols">
-        <h3>Markers</h3>
-        <form id="addmarker" action="javascript:addmarker();">
-          <label for="addmarkerbg">URL or color</label><br>
-          <input type="text" id="addmarkerbg"><br>
-          <label for="addmarkerfile">or file</label>
-          <input type="file" id="addmarkerfile" accept="image/*" data-target="addmarkerbg" onchange="convertFile(this)">
-          <label for="addmarkerlabel">Label (optional)</label><br>
-          <input type="text" id="addmarkerlabel">
-          <input type="checkbox" id="addmarkercirc" value="circle" name="circle">
-          <label for="addmarkercirc">Circle</label>
-          <input type="checkbox" id="addmarker3d" value="threed" name="threed">
-          <label for="addmarker3d">3d effect</label>
-          <button >Add new marker</button>
-        </form>
-        <div id="trashcan"></div>
-      </div>
-      
-      
-      <div id="drawcontrols">
-        <h3>Whiteboard</h3>
+       <h3>Whiteboard</h3>
+       <div id="drawcontrols">
         <label for="drawcolor">Draw Color: </label>
         <input type="color" id="drawcolor" value="#ff0000">
         
@@ -128,33 +115,71 @@
         </form>
         
       </div>
-     
-      <div id="bgcontrols">
-        <h3>Background</h3>
-        <input type="checkbox" id="showgrid" > <label for="showgrid">Draw grid</label>
-        <input type="range" min=5 max=350 step=5 id="gridpitch" value=50>
-        <form id="setbackground" action="javascript:void(0)" onsubmit="javascript:setbackground();">
-          <label for="setbackgroundbg">URL or color</label>
-          <input type="text" id="setbackgroundbg"><br>
-          <label for="setbackgroundfile">or file</label>
-          <input type="file" id="setbackgroundfile" accept="image/*" data-target="setbackgroundbg" onchange="convertFile(this)">
-          <button>Set background</button>
+      
+      <h3>Markers</h3>
+       <div id="markercontrols">
+       
+        <form id="addmarker" action="javascript:addmarker();">
+          <label for="addmarkerbg">URL or color</label>
+          <input type="text" id="addmarkerbg"><br>
+          
+          <label for="addmarkerfile">or file</label>
+          <input type="file" id="addmarkerfile" accept="image/*" data-target="addmarkerbg" onchange="convertFile(this)" value="" name="choose"><br>
+          
+          <label for="addmarkerlabel">Label (optional)</label>
+          <input type="text" id="addmarkerlabel"><br>
+          <span class="buttonset">
+            <input type="checkbox" id="addmarkercirc" value="circle" name="circle">
+            <label for="addmarkercirc">Circle</label>
+            <input type="checkbox" id="addmarker3d" value="threed" name="threed">
+            <label for="addmarker3d">3d effect</label>
+          </span>
+          <br>
+          <button >Add new marker</button>
         </form>
-        <button onclick="clearmaskzone_interactive()">Clear mask zone</button>
+      </div>
+      
+      
+      
+     
+      <h3>Background</h3>
+      <div id="bgcontrols">
+        <fieldset><legend>Grid</legend>
+          <span id="gridselect" class="buttonset">
+            <input type="radio" name="showgrid" id="showgrid_none" value="none" checked> <label for="showgrid_none">None</label>
+            <input type="radio" name="showgrid" id="showgrid_square" value="square"> <label for="showgrid_square">Square</label>
+            <input type="radio" name="showgrid" id="showgrid_hex" value="hex"> <label for="showgrid_hex">Hex</label>
+          </span>
+          <input type="range" min=5 max=350 step=5 id="gridpitch" value=50>
+        </fieldset>
+        <fieldset><legend>Background</legend>
+          <form id="setbackground" action="javascript:void(0)" onsubmit="javascript:setbackground();">
+            <label for="setbackgroundbg">URL or color</label>
+            <input type="text" id="setbackgroundbg"><br>
+            <label for="setbackgroundfile">or file</label>
+            <input type="file" id="setbackgroundfile" accept="image/*" data-target="setbackgroundbg" onchange="convertFile(this)" name="Choose" value="none"><br>
+            <button>Set background</button>
+          </form>
+          <button onclick="clearmaskzone_interactive()">Clear mask zone</button>
+        </fieldset>
       </div>
      
-      <div id="savecontrols">
-        <h3>Save/Load</h3>
+      <h3>Save/Load</h3>
+        <div id="savecontrols">
         <form id="saveform" action="javascript:void(0);" onsubmit="javascript:savegame();">
+          <fieldset>
           <label for="savename">Save name:</label>
-          <input type="text" id="savename">
+          <input type="text" id="savename"> <br>
           <input type="checkbox" id="saveoverwrite" checked="true">
-          <label for="saveoverwrite">Overwrite?</label>
+          <label for="saveoverwrite">Overwrite?</label><br>
           <button>Save game</button>
+          </fieldset>
         </form>
         
         <button onclick="loadgame()">Load game</button>
       </div>
+      </div>
+      <img src="Trash_Can-128.png" id="trashcan">
       
     </div>
   <div id="messages"></div>

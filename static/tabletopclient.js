@@ -185,24 +185,46 @@ function refreshwhiteboard()
     var oldwidth = ctx.lineWidth;
     ctx.lineWidth = 1;
     ctx.strokeStyle="#CCC";
+    ctx.beginPath();
     var pitch = parseInt(gamestate.grid.pitch);
-    var x = pitch;
-    while(x < W){
-      ctx.beginPath();
-      ctx.moveTo(x,0);
-      ctx.lineTo(x,H);
-      ctx.stroke();
-      x += pitch;
+  
+    if(gamestate.grid.show == "square"){
+      var x = pitch;
+      while(x < W){
+        ctx.moveTo(x,0);
+        ctx.lineTo(x,H);
+        x += pitch;
+      }
+      var y = pitch;
+      while(y<H){
+        ctx.moveTo(0,y);
+        ctx.lineTo(W,y);
+        y += pitch;
+      }
     }
-    var y = pitch;
-    while(y<H){
-      ctx.beginPath();
-      ctx.moveTo(0,y);
-      ctx.lineTo(W,y);
-      ctx.stroke();
-      y += pitch;
+    else if(gamestate.grid.show == "hex"){
+      var x=0;
+      var dy = pitch, dx = pitch*Math.sqrt(3);
+      while(x<W){
+        var y=0;
+        while(y<H){
+          ctx.moveTo(x,y);
+          ctx.lineTo(x,y+dy);
+          ctx.lineTo(x+dx/2., y+1.5*dy);
+          ctx.lineTo(x+dx/2., y+2.5*dy);
+          ctx.lineTo(x,y+3*dy);
+          ctx.moveTo(x+dx/2., y+1.5*dy);
+          ctx.lineTo(x+dx,y+dy);
+          ctx.moveTo(x+dx/2., y+2.5*dy);
+          ctx.lineTo(x+dx,y+3*dy);
+          y+=3*dy;
+        }
+        x+=dx;
+      }
     }
+    ctx.stroke();
     ctx.lineWidth = oldwidth;
+    
   }
   $.each(gamestate.layers,function(index,layer){
     if(layer.visible)
@@ -593,7 +615,7 @@ function activatepanning(elem,event){
 
 function drawgrid(data,emit){
   console.log(data);
-  data = data || {show:false};
+  data = data || {show:"none"};
   data.pitch = data.pitch || $("#gridpitch").val();
   
   if(!gamestate.grid || gamestate.grid.show != data.show || gamestate.grid.pitch != data.pitch){
@@ -603,7 +625,8 @@ function drawgrid(data,emit){
   if(emit)
     socket.emit("set grid",data);
   else{
-    $("#showgrid").prop("checked",data.show).button("refresh");
+    $("#gridselect input[name=showgrid][value="+data.show+"]").prop("checked",true);
+    $("#gridselect").buttonset("refresh");
     $("#gridpitch").val(data.pitch);
   }
   
@@ -613,8 +636,10 @@ $(function(){
   //ui functionality
   $("#whiteboard").get(0).getContext('2d').lineWidth=2;
   
-  $("[type=checkbox],button").button();
+  $("button").button();
+  $("span.buttonset").buttonset();
   //$("[type=range]").slider();
+  $("#sideboard_accordion").accordion()
   
   $("#releasenotes").dialog({
     autoOpen:false,
@@ -728,15 +753,15 @@ $(function(){
                               center: [$("#whiteboard").get(0).width/2,$("#whiteboard").get(0).height/2]
                             }); });
   
-  $("#showgrid").change(function(){
-    drawgrid({show:$(this).is(":checked"), pitch:$("#gridpitch").val()}, true);
+  $("#gridselect input[name=showgrid]").change(function(){
+    drawgrid({show:$(this).val(), pitch:$("#gridpitch").val()}, true);
   });
   
   $("#gridpitch").on("input",function(){
-    drawgrid({show:$("#showgrid").is(":checked"),pitch:$(this).val()}, false);
+    drawgrid({show:$("#gridselect input[name=showgrid]:checked").val(),pitch:$(this).val()}, false);
   })
   .change(function(){
-    drawgrid({show:$("#showgrid").is(":checked"),pitch:$(this).val()}, true);
+    drawgrid({show:$("#gridselect input[name=showgrid]:checked").val(),pitch:$(this).val()}, true);
   });
   
   socket.on('sync state',function(data){
