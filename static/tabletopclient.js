@@ -322,6 +322,8 @@ function updatemarker(markerdata,marker){
   marker = marker || $("#"+markerdata.id);
   marker.data("_TT_marker",markerdata);
   marker.find(".markerlabel").text(markerdata.label);
+  if(markerdata.activated === undefined)
+    markerdata.activated = false;
   marker.toggleClass("activated",markerdata.activated);
   //note todo: should remove min-height from non-3d labels if null
   var update = {};
