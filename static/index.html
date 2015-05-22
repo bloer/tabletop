@@ -47,7 +47,7 @@
     #whiteboard {z-index:0}
     div.circle {border-radius:50%}
     .marker {width:50px; height:50px;position:absolute; z-index:5; text-align:center; border:0px solid blue;cursor:move;}
-    
+    .marker.activated::after {content:"*"}
     .marker img {width:inherit; border:1px solid black }
     .marker.threed {/*-webkit-transform:rotate3d(1,1,0,45deg); transform:rotate3d(1,1,0,45deg);*/
                     -webkit-transform:skew(10deg,10deg);transform:skew(10deg,10deg);
@@ -137,8 +137,8 @@
           <br>
           <button >Add new marker</button>
         </form>
+        <button id="clearActivated" onclick="clearMarkerActivation()">Clear Activation</button>
       </div>
-      
       
       
      
