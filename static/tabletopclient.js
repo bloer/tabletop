@@ -296,6 +296,13 @@ function placemarker(markerdata){
           scaletofit(label);
         });
      })
+     .on("contextmenu",function(event){
+       event.preventDefault();
+       //if(event.which == 2)
+        $(this).toggleClass("activated");
+        $(this).data("_TT_marker").activated = $(this).hasClass("activated");
+        sendmarkerupdate($(this));
+     })
      ;
   var label = $("<div class='markerlabel'>"+markerdata.label+"</div>");
   if((markerdata.bg && markerdata.bg.substr(0,3)=="url") || markerdata.threed){
@@ -308,13 +315,16 @@ function placemarker(markerdata){
                   })
         .draggable({stack:'.marker', stop:function(event,ui){ sendmarkerupdate($(this),event,ui); } })
     
-  setTimeout(function(){ updatemarker(markerdata); marker.show("scale",function(){scaletofit(label);});},200);
+  setTimeout(function(){ updatemarker(markerdata); marker.show("scale",function(){scaletofit(label);});},20);
 }
 
 function updatemarker(markerdata,marker){
   marker = marker || $("#"+markerdata.id);
   marker.data("_TT_marker",markerdata);
   marker.find(".markerlabel").text(markerdata.label);
+  if(markerdata.activated === undefined)
+    markerdata.activated = false;
+  marker.toggleClass("activated",markerdata.activated);
   //note todo: should remove min-height from non-3d labels if null
   var update = {};
   if(markerdata.position){
@@ -330,6 +340,11 @@ function updatemarker(markerdata,marker){
   if(!$.isEmptyObject(update) || markerdata.label){
     marker.animate(update,function(){ scaletofit(marker.find(".markerlabel")); });
   }
+}
+
+function clearMarkerActivation()
+{
+  $(".marker").removeClass("activated");
 }
 
 function addmarker(){
@@ -393,7 +408,8 @@ function sendmarkerupdate(marker,event,ui){
       width:data.width,
       height:data.height,
       position:data.position,
-      label:data.label
+      label:data.label,
+      activated:data.activated
       //add other potential updates here
     }
   

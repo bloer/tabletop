@@ -280,7 +280,7 @@ var tabletop_server = function() {
         });
         
         socket.on('list saves',function(data,callback){
-          self.savegames.find({},{_id:1,name:1}).sort({name:1,_id:-1},function(err,docs){
+          self.savegames.find({},{_id:1,name:1}).sort({_id:-1,name:1},function(err,docs){
             if(!err){
               docs.forEach(function(doc){
                 doc.time = doc._id.getTimestamp();
