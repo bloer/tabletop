@@ -47,12 +47,14 @@
     #whiteboard {z-index:0}
     div.circle {border-radius:50%}
     .marker {width:50px; height:50px;position:absolute; z-index:5; text-align:center; border:0px solid blue;cursor:move;}
+    .marker.diceholder { border: 2px solid blue }
+    .marker.die { border: 1px solid gray;  border-radius:25%;display:inline-block; background-color:#FFEFD5}
     .marker.activated::after {content:"*"}
     .marker img {width:inherit; border:1px solid black }
     .marker.threed {/*-webkit-transform:rotate3d(1,1,0,45deg); transform:rotate3d(1,1,0,45deg);*/
                     -webkit-transform:skew(10deg,10deg);transform:skew(10deg,10deg);
                     border-width:2px 3px 1px 1px; border-style:solid; border-color:black}
-    .markerbody {width:100%;height:100%; border:0px solid black;
+    .markerbody {width:100%;height:100%; /*border:0px solid black;*/
         background-repeat:no-repeat; background-size:cover; border-radius:inherit}
     .markerbase { background-color:none; width:inherit; border:0px solid black;
          text-align:center;vertical-align:middle}
@@ -84,6 +86,8 @@
     .buttonset .ui-button-text {font-size:smaller; padding:5px}
     .ui-accordion .ui-accordion-content { padding:1em 0.6em }
     input[type=file] {width: 250px }
+    input[type=number] {width:2em; }
+    #diceform label {width:2em; display:inline-block}
 </style>
 </head>
 
@@ -178,6 +182,25 @@
         
         <button onclick="loadgame()">Load game</button>
       </div>
+      
+      <h3>Roll Dice</h3>
+      <div id="dicecontrols">
+      <form id="diceform" action="javascript:void(0);" onsubmit="javascript:rolldice();">
+        <label for="rolld4">d4</label> <input type="number" min="0" size="3" id="rolld4" name="d4" value="0">
+        <label for="rolld6">d6</label> <input type="number" min="0" size="3" id="rolld6" name="d6" value="0">
+        <label for="rolld8">d8</label> <input type="number" min="0" size="3" id="rolld8" name="d8" value="0">
+        <br>
+        <label for="rolld10">d10</label> <input type="number" min="0" size="3" id="rolld10" name="d10" value="0">
+        <label for="rolld12">d12</label> <input type="number" min="0" size="3" id="rolld12" name="d12" value="0">
+        <label for="rolld20">d20</label> <input type="number" min="0" size="3" id="rolld20" name="d20" value="0">
+        <br>
+        Label: <input type="text" id="rolllabel" name="label" value="Dice roll">
+        <br>
+        <button type="reset">Reset</button> <button type="submit">Roll!</button>
+      </form>
+      <!--<button onclick="javascript:removedice();">Remove all dice</button>-->
+      </div>
+      
       </div>
       <img src="Trash_Can-128.png" id="trashcan">
       
