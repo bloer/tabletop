@@ -103,6 +103,8 @@ var tabletop_server = function() {
         
         //transform data uri to stored image
         function uploadimage(data, callback){
+          if(!data)
+            return false;
           var datauri = data;
           if(data.substr(0,4) == "url(")
             datauri = data.substring(5,data.length-2);
@@ -129,7 +131,8 @@ var tabletop_server = function() {
         }
         
         //handle markers
-        socket.on('add marker',function(data){
+        
+        function addmarker(data){
           var newmarker = data;
           newmarker.id = self.getId(gstate.marker_counter++);
           //test to see if it's a data uri
@@ -141,6 +144,11 @@ var tabletop_server = function() {
             gstate.markers[newmarker.id] = newmarker;
             io.sockets.emit('add marker',newmarker);
           }
+          return newmarker;
+        }
+        
+        socket.on('add marker',function(data){
+          addmarker(data);
         });
         
         socket.on('update marker',function(data){
@@ -167,6 +175,33 @@ var tabletop_server = function() {
           }
           return gstate.layers[layername]
         }
+        
+        //handle dice rolling
+        socket.on('roll dice',function(data){
+          var diesize=35; //px
+          if(!data.parent){
+            //count total number of dice to be rolled
+            var total = data.dice.reduce(function(tot,curr){ return tot + curr[1]; },0);
+            //first add a container
+            var cwidth = total*(diesize+5) + 5;
+            if(cwidth<340) cwidth = 340;
+            var cheight = diesize + 120;
+            var container = addmarker({ width:cwidth, height:cheight, label:data.label, diceholder:true,bg:"#fcfcfc"});
+            data.parent = container.id;
+          }
+          //now add dice to the container
+          var offset = 5;
+          data.dice.forEach(function(d){
+              for(var i=0; i<d[1]; ++i){
+                var rank = d[0];
+                var roll = Math.ceil(Math.random()*rank);
+                addmarker({dierank:rank, dieroll: roll,label:"d"+rank+":"+roll,
+                            width:diesize, height:diesize, parent: data.parent, position:{top:85, left:offset}});
+                offset += diesize+5;
+                
+              }
+          });              
+        });
         
         //handle layer addition and removal
         socket.on('add layer',addlayer);

@@ -267,30 +267,41 @@ function clearlayer(data,emit){
 function placemarker(markerdata){
   if(!markerdata)
     return;
+  console.log(markerdata);
+  var parent = $("#"+markerdata.parent+" > .markerbody");
+  if(parent.size()==0)
+    parent = "#whiteboard-container";
   var marker = 
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
     //.data(markerdata)
-    .toggleClass("circle",markerdata.circle)
-    .toggleClass("threed",markerdata.threed)
+    .toggleClass("circle",markerdata.circle==true)
+    .toggleClass("threed",markerdata.threed==true)
+    .toggleClass("diceholder",markerdata.diceholder==true)
+    .toggleClass("die",markerdata.dierank !== undefined)
     .append($("<div class=markerbody></div>")
       .css({ background:markerdata.bg+" no-repeat center top", 'background-size':'cover'}))
     //.text(markerdata.label)
     .append("<div class='markerbase'></div>")
-    .appendTo("#whiteboard-container")
+    .appendTo(parent)
     .on('mousedown',function(event){ 
       event.stopPropagation(); 
       if(event.ctrlKey)
         $(this).draggable("option","helper","clone");
+      event.preventDefault();
+      if(event.which ==2)
+        removemarker(markerdata.id,true)
      })
      .on("dblclick",function(event){
-        var label = $(this).find(".markerlabel");
+        event.stopPropagation();
+        var label = $(this).children(".markerbody,.markerbase").children(".markerlabel");
         if(label.width() < 50) label.width(50);
-        if(label.height() < 20) label.height(20); 
+        if(label.height() < 20) label.height(20);
+        var parent = $(this);
         $("<input type='text' style='position:absolute;width:100%;height:100%';>")
         .val(label.text())
         .appendTo(label).offset(label.offset()).focus().select()
         .on('change',function(event,ui){
-          var marker = $(this).parents(".marker");
+          var marker = parent;
           label.text($(this).val());
           sendmarkerupdate(marker);
           scaletofit(label);
@@ -298,6 +309,7 @@ function placemarker(markerdata){
      })
      .on("contextmenu",function(event){
        event.preventDefault();
+       event.stopPropagation();
        //if(event.which == 2)
         $(this).toggleClass("activated");
         $(this).data("_TT_marker").activated = $(this).hasClass("activated");
@@ -305,15 +317,36 @@ function placemarker(markerdata){
      })
      ;
   var label = $("<div class='markerlabel'>"+markerdata.label+"</div>");
-  if((markerdata.bg && markerdata.bg.substr(0,3)=="url") || markerdata.threed){
-    label.appendTo(marker.find(".markerbase").css("min-height","1.1em"));
+  if((markerdata.bg && markerdata.bg.substr(0,3)=="url") || markerdata.threed || markerdata.diceholder){
+    label.appendTo(marker.children(".markerbase").css("min-height","1.1em"));
   }
   else
-    label.appendTo(marker.find(".markerbody"));
-  marker.resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); },
-                    resize:function(event,ui){ scaletofit($(this).find(".markerlabel")); }
-                  })
-        .draggable({stack:'.marker', stop:function(event,ui){ sendmarkerupdate($(this),event,ui); } })
+    label.appendTo(marker.children(".markerbody"));
+  if(!marker.hasClass("die")){
+    marker.resizable({autoHide: false, stop:function(){ sendmarkerupdate($(this)); },
+                    resize:function(event,ui){ scaletofit($(this).children(".markerbody,.markerbase").children(".markerlabel")); }
+                    });
+  }
+  marker.draggable({ stack:'.marker', stop:function(event,ui){ sendmarkerupdate($(this),event,ui); } });
+  //containment:"parent"
+  
+  if(markerdata.diceholder){
+    [4,6,8,10,12,20].forEach(function(n){
+      $("<button>+d"+n+"</button>").click(function(){
+         socket.emit("roll dice",{dice: [[n,1]], parent: markerdata.id});
+      }).appendTo(marker.children(".markerbody"));
+    });
+    marker.children(".markerbody").append("<br>").append($("<button>Reroll</button>").click(function(){
+      marker.find(".die").each(function(){
+        var die = $(this);
+        var data = die.data("_TT_marker");
+        data.dieroll = Math.ceil(Math.random()*data.dierank);
+        data.label = "d"+data.dierank+":"+data.dieroll;
+        scaletofit(die.children().children(".markerlabel").text(data.label));
+        sendmarkerupdate(die);
+      });
+    })).append("<br>");
+  }
     
   setTimeout(function(){ updatemarker(markerdata); marker.show("scale",function(){scaletofit(label);});},20);
 }
@@ -321,7 +354,7 @@ function placemarker(markerdata){
 function updatemarker(markerdata,marker){
   marker = marker || $("#"+markerdata.id);
   marker.data("_TT_marker",markerdata);
-  marker.find(".markerlabel").text(markerdata.label);
+  marker.children(".markerbody,.markerbase").children(".markerlabel").text(markerdata.label);
   if(markerdata.activated === undefined)
     markerdata.activated = false;
   marker.toggleClass("activated",markerdata.activated);
@@ -331,14 +364,14 @@ function updatemarker(markerdata,marker){
     update.left = markerdata.position.left;
     update.top = markerdata.position.top;
   }
-  else
+  else if(marker.parents(".marker").size()==0)
     centerme(marker);
   if(markerdata.width)
     update.width = markerdata.width;
   if(markerdata.height)
     update.height = markerdata.height;
   if(!$.isEmptyObject(update) || markerdata.label){
-    marker.animate(update,function(){ scaletofit(marker.find(".markerlabel")); });
+    marker.animate(update,function(){ scaletofit(marker.children(".markerbody,.markerbase").children(".markerlabel")); });
   }
 }
 
@@ -387,6 +420,8 @@ function drawpath(data){
 }
 
 function sendmarkerupdate(marker,event,ui){
+  if(!marker.data("_TT_marker"))
+    marker.data("_TT_marker") = {};
   var data = marker.data("_TT_marker");
   if(marker.draggable("option","helper")=="clone"){
     //actually clone instead of update
@@ -401,7 +436,7 @@ function sendmarkerupdate(marker,event,ui){
     data.width = marker.width();
     data.height = marker.height();
     data.position = marker.position();
-    data.label = marker.find(".markerlabel").text();
+    data.label = marker.children().children(".markerlabel").text();
     //don't send the whole object...
     var reply = {
       id:data.id,
@@ -409,7 +444,8 @@ function sendmarkerupdate(marker,event,ui){
       height:data.height,
       position:data.position,
       label:data.label,
-      activated:data.activated
+      activated:data.activated,
+      dierank:data.dierank
       //add other potential updates here
     }
   
@@ -481,9 +517,16 @@ function showlayer(data,emit){
 }
 
 function removemarker(id,emit){
-  $("#"+id).hide("explode",function(){ $(this).remove(); });
-  if(emit)
+  if(emit){
     socket.emit('remove marker',{id:id});
+    //also get any "children"
+    $("#"+id).find(".marker").each(function(){
+      removemarker($(this).attr("id"),true);
+    });
+  }
+  
+  $("#"+id).css("z-index",20).hide("explode",function(){ $(this).remove(); });
+  
 }
 
 function savegame(){
@@ -646,6 +689,16 @@ function drawgrid(data,emit){
     $("#gridpitch").val(data.pitch);
   }
   
+}
+
+function rolldice(){
+  var dice = 
+  [4,6,8,10,12,20].map(function(n){
+    id="#rolld"+n;
+    var roll = parseInt($(id).val());
+    return [n,roll];
+  });
+  socket.emit('roll dice',{label: $("#rolllabel").val(), dice:dice});
 }
 
 $(function(){
