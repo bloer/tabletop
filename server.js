@@ -186,17 +186,20 @@ var tabletop_server = function() {
             var cwidth = total*(diesize+5) + 5;
             if(cwidth<340) cwidth = 340;
             var cheight = diesize + 120;
-            var container = addmarker({ width:cwidth, height:cheight, label:data.label, diceholder:true,bg:"#fcfcfc"});
+            var container = addmarker({ width:cwidth, height:cheight, label:data.label, diceholder:true /*,bg:"#fcfcfc"*/});
             data.parent = container.id;
           }
           //now add dice to the container
           var offset = 5;
+          data.dice.sort(function(a,b){ return a[0]-b[0]; });
           data.dice.forEach(function(d){
               for(var i=0; i<d[1]; ++i){
                 var rank = d[0];
-                var roll = Math.ceil(Math.random()*rank);
-                addmarker({dierank:rank, dieroll: roll,label:"d"+rank+":"+roll,
-                            width:diesize, height:diesize, parent: data.parent, position:{top:85, left:offset}});
+                var roll = data.blank ? null : Math.ceil(Math.random()*rank);
+                var label = "d"+rank+(roll ? ":"+roll : "");
+                addmarker({dierank:rank, dieroll: roll,label:label,
+                            width:diesize, height:diesize, parent: data.parent, 
+                            position:data.position ? data.position : {top:85, left:offset}});
                 offset += diesize+5;
                 
               }
