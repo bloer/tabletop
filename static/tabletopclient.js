@@ -350,6 +350,8 @@ function placemarker(markerdata){
         scaletofit(die.children().children(".markerlabel").text(data.label));
         sendmarkerupdate(die);
       });
+    })).append($("<button>Clear</button>").click(function(){
+      $(this).parent().children(".marker").each(function(){ removemarker($(this).attr("id"),true); });
     })).append("<br>");
   }
     
