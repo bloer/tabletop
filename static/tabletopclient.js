@@ -327,7 +327,10 @@ function placemarker(markerdata){
                     resize:function(event,ui){ scaletofit($(this).children(".markerbody,.markerbase").children(".markerlabel")); }
                     });
   }
-  marker.draggable({ stack:'.marker', stop:function(event,ui){ sendmarkerupdate($(this),event,ui); } });
+  marker.draggable({ stack:'.marker', 
+      stop:function(event,ui){ $(".marker").each(function(){ sendmarkerupdate($(this),event,ui); }); 
+                              } 
+  });
   //containment:"parent"
   
   if(markerdata.diceholder){
@@ -370,6 +373,8 @@ function updatemarker(markerdata,marker){
     update.width = markerdata.width;
   if(markerdata.height)
     update.height = markerdata.height;
+  if(markerdata.zindex)
+    update['z-index'] = markerdata.zindex;
   if(!$.isEmptyObject(update) || markerdata.label){
     marker.animate(update,function(){ scaletofit(marker.children(".markerbody,.markerbase").children(".markerlabel")); });
   }
@@ -437,19 +442,22 @@ function sendmarkerupdate(marker,event,ui){
     data.height = marker.height();
     data.position = marker.position();
     data.label = marker.children().children(".markerlabel").text();
+    data.zindex = marker.zIndex();
     //don't send the whole object...
     var reply = {
       id:data.id,
       width:data.width,
       height:data.height,
       position:data.position,
+      zindex: data.zindex,
       label:data.label,
       activated:data.activated,
       dierank:data.dierank
       //add other potential updates here
     }
-  
-    socket.emit('update marker',reply);
+    socket.emit('update marker',data /*was reply*/);
+    
+    
   }
 }
 
