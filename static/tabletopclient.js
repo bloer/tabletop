@@ -267,10 +267,12 @@ function clearlayer(data,emit){
 function placemarker(markerdata){
   if(!markerdata)
     return;
-  console.log(markerdata);
+  //console.log(markerdata);
   var parent = $("#"+markerdata.parent+" > .markerbody");
   if(parent.size()==0)
     parent = "#whiteboard-container";
+  //make sure it comes out on top
+  markerdata.zindex = Math.max.apply(Math,$(".marker").map(function(){ return $(this).zIndex(); }).get())+1;
   var marker = 
   $("<div class='marker' style='display:none' id='"+markerdata.id+"'></div>")
     //.data(markerdata)
@@ -328,7 +330,7 @@ function placemarker(markerdata){
                     });
   }
   marker.draggable({ stack:'.marker', 
-      stop:function(event,ui){ $(".marker").each(function(){ sendmarkerupdate($(this),event,ui); }); 
+      stop:function(event,ui){ $(".marker[id]").each(function(){ sendmarkerupdate($(this),event,ui); }); 
                               } 
   });
   //containment:"parent"
@@ -426,7 +428,7 @@ function drawpath(data){
 
 function sendmarkerupdate(marker,event,ui){
   if(!marker.data("_TT_marker"))
-    marker.data("_TT_marker") = {};
+    marker.data("_TT_marker",{});
   var data = marker.data("_TT_marker");
   if(marker.draggable("option","helper")=="clone"){
     //actually clone instead of update
@@ -437,7 +439,7 @@ function sendmarkerupdate(marker,event,ui){
     datacopy.position = ui.position;
     socket.emit('add marker',datacopy);
   }
-  else{
+  //else{
     data.width = marker.width();
     data.height = marker.height();
     data.position = marker.position();
@@ -458,7 +460,7 @@ function sendmarkerupdate(marker,event,ui){
     socket.emit('update marker',data /*was reply*/);
     
     
-  }
+  //}
 }
 
 function addlayer(data, emit){
