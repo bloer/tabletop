@@ -264,6 +264,28 @@ function clearlayer(data,emit){
     socket.emit('clear layer',data);
 }
 
+function clearchildren(container){
+  var ret = { dice: [] };
+  container.children(".marker").each(function(){
+    var data = $(this).data("_TT_marker");
+    if(data.dierank){
+      ret.dice.push([data.dierank,1]);
+    }
+    removemarker($(this).attr("id"),true);
+  });
+  return ret;
+}
+
+function updatetotal(diceholder){
+  var total = 0;
+  diceholder.children(".marker.die").each(function(){ 
+    if($(this).data("_TT_marker") && $(this).data("_TT_marker").dieroll)
+      total += $(this).data("_TT_marker").dieroll; 
+  });
+  diceholder.children(".total").text(total ? "Total="+total : "");
+  return total;
+}
+
 function placemarker(markerdata){
   if(!markerdata)
     return;
@@ -295,19 +317,26 @@ function placemarker(markerdata){
      })
      .on("dblclick",function(event){
         event.stopPropagation();
-        var label = $(this).children(".markerbody,.markerbase").children(".markerlabel");
-        if(label.width() < 50) label.width(50);
-        if(label.height() < 20) label.height(20);
-        var parent = $(this);
-        $("<input type='text' style='position:absolute;width:100%;height:100%';>")
-        .val(label.text())
-        .appendTo(label).offset(label.offset()).focus().select()
-        .on('change',function(event,ui){
-          var marker = parent;
-          label.text($(this).val());
-          sendmarkerupdate(marker);
-          scaletofit(label);
-        });
+        if($(this).hasClass("die")){
+          //reroll just me
+          removemarker(markerdata.id,true);
+          socket.emit("roll dice",{dice:[[markerdata.dierank,1]],parent:markerdata.parent,position:$(this).position()});
+        }
+        else{
+          var label = $(this).children(".markerbody,.markerbase").children(".markerlabel");
+          if(label.width() < 50) label.width(50);
+          if(label.height() < 20) label.height(20);
+          var parent = $(this);
+          $("<input type='text' style='position:absolute;width:100%;height:100%';>")
+          .val(label.text())
+          .appendTo(label).offset(label.offset()).focus().select()
+          .on('change',function(event,ui){
+            var marker = parent;
+            label.text($(this).val());
+            sendmarkerupdate(marker);
+            scaletofit(label);
+          });
+        }
      })
      .on("contextmenu",function(event){
        event.preventDefault();
@@ -338,25 +367,33 @@ function placemarker(markerdata){
   if(markerdata.diceholder){
     [4,6,8,10,12,20].forEach(function(n){
       $("<button>+d"+n+"</button>").click(function(){
-         socket.emit("roll dice",{dice: [[n,1]], parent: markerdata.id});
+         dice = clearchildren($(this).parent()).dice;
+         dice.push([n,1]);
+         socket.emit("roll dice",{dice: dice, parent: markerdata.id, blank: true});
       }).appendTo(marker.children(".markerbody"));
     });
-    marker.children(".markerbody").append("<br>").append($("<button>Reroll</button>").click(function(){
-      marker.find(".die").each(function(){
-        var die = $(this);
-        var data = die.data("_TT_marker");
-        data.dieroll = Math.ceil(Math.random()*data.dierank);
-        data.label = "d"+data.dierank+":"+data.dieroll;
-        scaletofit(die.children().children(".markerlabel").text(data.label));
-        sendmarkerupdate(die);
-      });
-    })).append($("<button>Clear</button>").click(function(){
-      $(this).parent().children(".marker").each(function(){ removemarker($(this).attr("id"),true); });
-    })).append("<br>");
+    marker.children(".markerbody").append("<br>")
+    .append($("<button class='resetdice'>Reset</button>").click(function(){
+      socket.emit("roll dice",{dice: clearchildren($(this).parent()).dice, parent:markerdata.id, blank:true});
+    }))
+    .append($("<button class='rerolldice'>Roll</button>").click(function(){
+      socket.emit("roll dice",{dice: clearchildren($(this).parent()).dice, parent:markerdata.id});
+    })).append($("<button class='cleardice'>Clear</button>").click(function(){
+      clearchildren($(this).parent());
+    }))
+    .append("<span class='total'></span>")
+    .append("<br>");
   }
     
-  setTimeout(function(){ updatemarker(markerdata); marker.show("scale",function(){scaletofit(label);});},20);
+  setTimeout(function(){ updatemarker(markerdata); 
+      marker.show("scale",
+                  function(){ scaletofit(label);
+                              if(marker.hasClass("die")) updatetotal(marker.parent());
+                            });
+                        },20);
 }
+
+
 
 function updatemarker(markerdata,marker){
   marker = marker || $("#"+markerdata.id);
@@ -382,6 +419,7 @@ function updatemarker(markerdata,marker){
   if(!$.isEmptyObject(update) || markerdata.label){
     marker.animate(update,function(){ scaletofit(marker.children(".markerbody,.markerbase").children(".markerlabel")); });
   }
+  
 }
 
 function clearMarkerActivation()
@@ -536,9 +574,13 @@ function removemarker(id,emit){
       removemarker($(this).attr("id"),true);
     });
   }
-  
-  $("#"+id).css("z-index",20).hide("explode",function(){ $(this).remove(); });
-  
+  var parent = $("#"+id).parent();
+  $("#"+id).css("z-index",20).hide("explode",
+      function(){ $(this).remove(); 
+                if(parent && parent.children(".total").size())
+                  updatetotal(parent);
+                }
+              );
 }
 
 function savegame(){
