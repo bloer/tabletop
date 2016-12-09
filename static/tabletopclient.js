@@ -727,7 +727,6 @@ function activatepanning(elem,event){
 }
 
 function drawgrid(data,emit){
-  console.log(data);
   data = data || {show:"none"};
   data.pitch = data.pitch || $("#gridpitch").val();
   
@@ -753,6 +752,13 @@ function rolldice(){
     return [n,roll];
   });
   socket.emit('roll dice',{label: $("#rolllabel").val(), dice:dice});
+}
+
+function updatenotepad(text,emit){
+  if(emit)
+    socket.emit('update notepad',text);
+  else
+    $("#notepad").val(text);
 }
 
 $(function(){
@@ -887,6 +893,8 @@ $(function(){
     drawgrid({show:$("#gridselect input[name=showgrid]:checked").val(),pitch:$(this).val()}, true);
   });
   
+  $("#notepad").on("input",function(){ updatenotepad($("#notepad").val(), true); });
+  
   socket.on('sync state',function(data){
     gamestate = data;
     //refreshwhiteboard(); <-gets called automatically
@@ -897,6 +905,7 @@ $(function(){
     if(data.background)
       setbackground(data.background);
     drawgrid(data.grid);
+    updatenotepad(data.notepad);
   });
   
   socket.on('add marker', placemarker);
@@ -924,5 +933,6 @@ $(function(){
   socket.on('zoom layer',function(data){ zoomlayer(data.layer,data.factor,data.center); })
   socket.on('message',function(msg){ $("#messages").append("<br>"+msg); });
   socket.on('set grid',drawgrid);
+  socket.on('update notepad', updatenotepad);
   
 });

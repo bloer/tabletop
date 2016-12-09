@@ -81,7 +81,8 @@ var tabletop_server = function() {
         marker_counter: 0,
         markers: {},
         background: {},
-        layers: {'default': {paths:[], visible: true} }
+        layers: {'default': {paths:[], visible: true} },
+        notepad: ""
       };
       
       io.on('connection', function (socket) {
@@ -328,6 +329,11 @@ var tabletop_server = function() {
           });
         });
         
+        //handle notepad sync
+        socket.on('update notepad', function(data){ 
+          gstate.notepad = data;
+          socket.broadcast.emit('update notepad',data);
+        });
       });
     };
 
