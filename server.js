@@ -16,7 +16,7 @@ var tabletop_server = function() {
 
     //  Scope.
     var self = this;
-
+    self.app = app
 
     /*  ================================================================  */
     /*  Helper functions.                                                 */
@@ -27,16 +27,22 @@ var tabletop_server = function() {
      */
     self.setupVariables = function() {
         //  Set the environment variables we need.
-        self.ipaddress = process.env.OPENSHIFT_NODEJS_IP;
-        self.port      = process.env.OPENSHIFT_NODEJS_PORT || 8080;
-        self.dburl     = process.env.OPENSHIFT_MONGODB_DB_URL || "localhost/tabletop";
+	self.ipaddress = '0.0.0.0';
+	self.port = 8080;
+	self.dbhost = process.env.mongodb_SERVICE_HOST || 'localhost';
+	self.dbport = process.env.mongodb_SERVICE_PORT || 27017;
+	self.dbuser = process.env.MONGODB_USER || 'tabletop';
+	self.dbpass = process.env.MONGODB_PASSWORD || 'tabletop';
+	self.dbname = process.env.MONGODB_DATABASE || 'tabletop';
+	self.dbadmin = process.env.MONGODB_ADMIN_PASSWORD || 'Tabletop@dmin1';
+	
+	self.dburl = self.dbuser+':'+self.dbpass+'@'+self.dbhost+':'+self.dbport
+	    +'/'+self.dbname;
+	self.admindburl = 'admin:'+self.dbadmin+'@'+self.dbhost+':'+self.dbport
+	    +'/'+self.dbname;
+	
 
-        if (typeof self.ipaddress === "undefined") {
-            //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
-            //  allows us to run/test the app locally.
-            console.warn('No OPENSHIFT_NODEJS_IP var, using 127.0.0.1');
-            //self.ipaddress = "127.0.0.1";
-        };
+        
     };
 
 
@@ -356,12 +362,15 @@ var tabletop_server = function() {
           });
         });
         // Connect to the database
+	//as admin to ensure indexes
+	self.admindb = mongojs(self.admindburl,['savegames','images'])
+	self.admindb.collection('savegames').ensureIndex({'name':1});
+	self.admindb.collection('images').ensureIndex({'hash':1},{unique:true});
+	
         self.db = mongojs(self.dburl,['savegames','images']);
         self.db.on('error',function(err){ console.log('database error',err); });
         self.savegames = self.db.collection('savegames');
-        self.savegames.ensureIndex({'name':1});
         self.images = self.db.collection('images');
-        self.images.ensureIndex({'hash':1},{unique:true});
     };
 
 
