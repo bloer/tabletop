@@ -29,8 +29,8 @@ var tabletop_server = function() {
         //  Set the environment variables we need.
 	self.ipaddress = '0.0.0.0';
 	self.port = 8080;
-	self.dbhost = process.env.mongodb_SERVICE_HOST || 'localhost';
-	self.dbport = process.env.mongodb_SERVICE_PORT || 27017;
+	self.dbhost = process.env.MONGODB_SERVICE_HOST || 'localhost';
+	self.dbport = process.env.MONGODB_SERVICE_PORT || 27017;
 	self.dbuser = process.env.MONGODB_USER || 'tabletop';
 	self.dbpass = process.env.MONGODB_PASSWORD;
 	self.dbname = process.env.MONGODB_DATABASE || 'tabletop';
