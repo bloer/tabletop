@@ -32,15 +32,19 @@ var tabletop_server = function() {
 	self.dbhost = process.env.mongodb_SERVICE_HOST || 'localhost';
 	self.dbport = process.env.mongodb_SERVICE_PORT || 27017;
 	self.dbuser = process.env.MONGODB_USER || 'tabletop';
-	self.dbpass = process.env.MONGODB_PASSWORD || 'tabletop';
+	self.dbpass = process.env.MONGODB_PASSWORD;
 	self.dbname = process.env.MONGODB_DATABASE || 'tabletop';
-	self.dbadmin = process.env.MONGODB_ADMIN_PASSWORD || 'Tabletop@dmin1';
+	self.dbadmin = process.env.MONGODB_ADMIN_PASSWORD;
 	
-	self.dburl = self.dbuser+':'+self.dbpass+'@'+self.dbhost+':'+self.dbport
-	    +'/'+self.dbname;
-	self.admindburl = 'admin:'+self.dbadmin+'@'+self.dbhost+':'+self.dbport
-	    +'/'+self.dbname;
 	
+	self.dburl = self.dbhost+':'+self.dbport +'/'+self.dbname;
+	self.admindburl = self.dburl;
+	if(self.dbpass)
+	    self.dburl = self.dbuser+':'+self.dbpass+'@'+self.dburl;
+	if(self.dbadmin)
+	    self.admindburl = 'admin:'+self.dbadmin+'@'+self.admindburl
+	console.log("DBurl = %s",self.dburl);
+	console.log("DBadminurl = %s",self.admindburl);
 
         
     };
