@@ -38,11 +38,14 @@ var tabletop_server = function() {
 	
 	
 	self.dburl = self.dbhost+':'+self.dbport +'/'+self.dbname;
-	self.admindburl = self.dburl;
+	self.admindburl = self.dbhost+':'+self.dbport+'/admin';
 	if(self.dbpass)
 	    self.dburl = self.dbuser+':'+self.dbpass+'@'+self.dburl;
 	if(self.dbadmin)
 	    self.admindburl = 'admin:'+self.dbadmin+'@'+self.admindburl
+
+	self.dburl = "mongodb://"+self.dburl;
+	self.admindburl = "mongodb://"+self.admindburl;
 	console.log("DBurl = %s",self.dburl);
 	console.log("DBadminurl = %s",self.admindburl);
 
@@ -367,9 +370,9 @@ var tabletop_server = function() {
         });
         // Connect to the database
 	//as admin to ensure indexes
-	self.admindb = mongojs(self.admindburl,['savegames','images'])
-	self.admindb.collection('savegames').ensureIndex({'name':1});
-	self.admindb.collection('images').ensureIndex({'hash':1},{unique:true});
+	//self.admindb = mongojs(self.admindburl,['savegames','images'])
+	//self.admindb.collection('savegames').ensureIndex({'name':1});
+	//self.admindb.collection('images').ensureIndex({'hash':1},{unique:true});
 	
         self.db = mongojs(self.dburl,['savegames','images']);
         self.db.on('error',function(err){ console.log('database error',err); });
